@@ -1,0 +1,22 @@
+# Constants
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+FPS = 60
+
+# Colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
+PURPLE = (128, 0, 128)
+CYAN = (0, 255, 255)
+
+# Game settings
+GRAVITY = 0.8
+PLAYER_SPEED = 5
+PLAYER_JUMP = -15
+PROJECTILE_SPEED = 8
+ENEMY_SPEED = 2
+ENEMY_SHOOT_CHANCE = 0.01  # Probability per frame

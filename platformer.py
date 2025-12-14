@@ -1,0 +1,32 @@
+import pygame
+from game import Game
+
+# Initialize Pygame
+pygame.init()
+
+
+def main():
+    print("=== Platformer Game ===")
+    print("Select number of players:")
+    print("1. Single Player")
+    print("2. Two Players")
+
+    choice = input("Enter choice (1 or 2): ").strip()
+
+    if choice == "2":
+        num_players = 2
+        print("\nPlayer 1 Controls: W=Jump, A=Left, D=Right, SPACE=Shoot")
+        print("Player 2 Controls: UP=Jump, LEFT=Left, RIGHT=Right, RSHIFT=Shoot")
+    else:
+        num_players = 1
+        print("\nControls: W=Jump, A=Left, D=Right, SPACE=Shoot")
+
+    print("\nObjective: Eliminate all enemies!")
+    print("Starting game...\n")
+
+    game = Game(num_players)
+    game.run()
+
+
+if __name__ == "__main__":
+    main()
