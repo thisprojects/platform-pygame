@@ -1,10 +1,20 @@
 import pygame
-from config import (SCREEN_HEIGHT, SCREEN_WIDTH, BLACK, WHITE,
-                    RED, FPS, CYAN, BLUE, GREEN)
+from config import (
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
+    BLACK,
+    WHITE,
+    RED,
+    FPS,
+    CYAN,
+    BLUE,
+    GREEN,
+)
 import sys
 from platforms import Platform
 from player import Player
 from enemy import Enemy
+from obstacles import Obstacle
 
 
 class Game:
@@ -21,6 +31,7 @@ class Game:
         self.players = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.projectiles = pygame.sprite.Group()
+        self.obstacles = pygame.sprite.Group()
 
         self.setup_level()
         self.setup_players()
@@ -51,13 +62,28 @@ class Game:
             self.platforms.add(platform)
             self.all_sprites.add(platform)
 
+        # Create obstacles (2x player size: 60x80)
+        obstacle_data = [
+            # (x, y, width, height) - placed on top of platforms
+            (150, 400, 60, 80),  # On platform at (100, 480)
+            (580, 400, 60, 80),  # On platform at (500, 480)
+            (350, 300, 60, 80),  # On platform at (300, 380)
+            (150, 200, 60, 80),  # On platform at (100, 280)
+            (350, 100, 60, 80),  # On platform at (250, 180)
+        ]
+
+        for data in obstacle_data:
+            obstacle = Obstacle(*data)
+            self.obstacles.add(obstacle)
+            self.all_sprites.add(obstacle)
+
     def setup_players(self):
         # Player 1 controls
         player1_controls = {
-            'left': pygame.K_a,
-            'right': pygame.K_d,
-            'jump': pygame.K_w,
-            'shoot': pygame.K_SPACE
+            "left": pygame.K_a,
+            "right": pygame.K_d,
+            "jump": pygame.K_w,
+            "shoot": pygame.K_SPACE,
         }
         player1 = Player(100, SCREEN_HEIGHT - 100, BLUE, player1_controls)
         self.players.add(player1)
@@ -66,13 +92,14 @@ class Game:
         if self.num_players == 2:
             # Player 2 controls
             player2_controls = {
-                'left': pygame.K_LEFT,
-                'right': pygame.K_RIGHT,
-                'jump': pygame.K_UP,
-                'shoot': pygame.K_RSHIFT
+                "left": pygame.K_LEFT,
+                "right": pygame.K_RIGHT,
+                "jump": pygame.K_UP,
+                "shoot": pygame.K_RSHIFT,
             }
-            player2 = Player(SCREEN_WIDTH - 130, SCREEN_HEIGHT - 100,
-                             CYAN, player2_controls)
+            player2 = Player(
+                SCREEN_WIDTH - 130, SCREEN_HEIGHT - 100, CYAN, player2_controls
+            )
             self.players.add(player2)
             self.all_sprites.add(player2)
 
@@ -121,24 +148,33 @@ class Game:
 
         # Update all sprites
         for player in self.players:
-            player.update(self.platforms)
+            player.update(self.platforms, self.obstacles)
 
         for enemy in self.enemies:
-            enemy.update(self.platforms)
+            enemy.update(self.platforms, self.obstacles)
             enemy.try_shoot(self.projectiles)
 
         self.projectiles.update()
 
         # Check projectile collisions
         for projectile in self.projectiles:
-            if projectile.owner_type == 'player':
+            # Check if projectile hits obstacles
+            hit_obstacles = pygame.sprite.spritecollide(
+                projectile, self.obstacles, False
+            )
+            if hit_obstacles:
+                projectile.kill()
+                continue
+
+            if projectile.owner_type == "player":
                 # Player projectiles hit enemies
-                hit_enemies = pygame.sprite.spritecollide(projectile,
-                                                          self.enemies, True)
+                hit_enemies = pygame.sprite.spritecollide(
+                    projectile, self.enemies, True
+                )
                 if hit_enemies:
                     projectile.kill()
 
-            elif projectile.owner_type == 'enemy':
+            elif projectile.owner_type == "enemy":
                 # Enemy projectiles hit players
                 for player in self.players:
                     if player.alive and projectile.rect.colliderect(player.rect):
@@ -159,6 +195,7 @@ class Game:
 
         # Draw all sprites
         self.platforms.draw(self.screen)
+        self.obstacles.draw(self.screen)
         self.players.draw(self.screen)
         self.enemies.draw(self.screen)
         self.projectiles.draw(self.screen)
@@ -172,29 +209,33 @@ class Game:
 
         # Player status
         alive_players = sum(1 for p in self.players if p.alive)
-        player_text = font.render(f"Players: {alive_players}/{self.num_players}", True, WHITE)
+        player_text = font.render(
+            f"Players: {alive_players}/{self.num_players}", True, WHITE
+        )
         self.screen.blit(player_text, (10, 50))
 
         # Game over / victory messages
         if self.game_over:
             game_over_text = font.render("GAME OVER!", True, RED)
-            restart_text = font.render("Press R to restart or Q to quit",
-                                       True, WHITE)
-            text_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2,
-                                                        SCREEN_HEIGHT // 2))
-            restart_rect = restart_text.get_rect(center=(SCREEN_WIDTH // 2,
-                                                         SCREEN_HEIGHT // 2 + 50))
+            restart_text = font.render("Press R to restart or Q to quit", True, WHITE)
+            text_rect = game_over_text.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+            )
+            restart_rect = restart_text.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50)
+            )
             self.screen.blit(game_over_text, text_rect)
             self.screen.blit(restart_text, restart_rect)
 
         if self.victory:
             victory_text = font.render("VICTORY!", True, GREEN)
-            restart_text = font.render("Press R to restart or Q to quit",
-                                       True, WHITE)
-            text_rect = victory_text.get_rect(center=(SCREEN_WIDTH // 2,
-                                                      SCREEN_HEIGHT // 2))
-            restart_rect = restart_text.get_rect(center=(SCREEN_WIDTH // 2,
-                                                         SCREEN_HEIGHT // 2 + 50))
+            restart_text = font.render("Press R to restart or Q to quit", True, WHITE)
+            text_rect = victory_text.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+            )
+            restart_rect = restart_text.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50)
+            )
             self.screen.blit(victory_text, text_rect)
             self.screen.blit(restart_text, restart_rect)
 

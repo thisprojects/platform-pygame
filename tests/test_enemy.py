@@ -8,14 +8,15 @@ from unittest.mock import patch
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Load the local platform module to avoid conflict with built-in platform module
-platform_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'platform.py'))
-spec = importlib.util.spec_from_file_location("platform_module", platform_path)
+# Load the local platforms module to avoid conflict with built-in platform module
+platforms_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'platforms.py'))
+spec = importlib.util.spec_from_file_location("platform_module", platforms_path)
 platform_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(platform_module)
 Platform = platform_module.Platform
 
 from enemy import Enemy
+from obstacles import Obstacle
 from config import ENEMY_SPEED, GRAVITY, SCREEN_WIDTH, SCREEN_HEIGHT
 
 
@@ -50,10 +51,11 @@ class TestEnemy:
 
     def test_enemy_gravity_applied(self, enemy):
         platforms = []
+        obstacles = []
         initial_y = enemy.rect.y
         initial_vel_y = enemy.vel_y
 
-        enemy.update(platforms)
+        enemy.update(platforms, obstacles)
 
         assert enemy.vel_y == initial_vel_y + GRAVITY
         assert enemy.rect.y > initial_y
@@ -63,9 +65,10 @@ class TestEnemy:
             with patch('random.randint', return_value=60):
                 enemy = Enemy(100, 100)
                 platforms = []
+                obstacles = []
                 initial_x = enemy.rect.x
 
-                enemy.update(platforms)
+                enemy.update(platforms, obstacles)
 
                 assert enemy.rect.x == initial_x + ENEMY_SPEED
 
@@ -74,8 +77,9 @@ class TestEnemy:
             with patch('random.randint', return_value=60):
                 enemy = Enemy(0, 100)
                 platforms = []
+                obstacles = []
 
-                enemy.update(platforms)
+                enemy.update(platforms, obstacles)
 
                 assert enemy.rect.left >= 0
                 assert enemy.vel_x == ENEMY_SPEED
@@ -85,8 +89,9 @@ class TestEnemy:
             with patch('random.randint', return_value=60):
                 enemy = Enemy(SCREEN_WIDTH - 30, 100)
                 platforms = []
+                obstacles = []
 
-                enemy.update(platforms)
+                enemy.update(platforms, obstacles)
 
                 assert enemy.rect.right <= SCREEN_WIDTH
                 assert enemy.vel_x == -ENEMY_SPEED
@@ -96,9 +101,10 @@ class TestEnemy:
             with patch('random.randint', return_value=60):
                 enemy = Enemy(100, SCREEN_HEIGHT - 50)
                 platforms = []
+                obstacles = []
 
                 for _ in range(20):
-                    enemy.update(platforms)
+                    enemy.update(platforms, obstacles)
 
                 assert enemy.rect.bottom == SCREEN_HEIGHT
                 assert enemy.on_ground is True
@@ -110,9 +116,10 @@ class TestEnemy:
                 enemy = Enemy(100, 100)
                 platform = Platform(90, 150, 100, 20)
                 platforms = [platform]
+                obstacles = []
 
                 for _ in range(20):
-                    enemy.update(platforms)
+                    enemy.update(platforms, obstacles)
 
                 assert enemy.on_ground is True
                 assert enemy.rect.bottom == platform.rect.top
@@ -123,8 +130,9 @@ class TestEnemy:
                 enemy = Enemy(95, 100)
                 platform = Platform(100, 90, 50, 60)
                 platforms = [platform]
+                obstacles = []
 
-                enemy.update(platforms)
+                enemy.update(platforms, obstacles)
 
                 assert enemy.rect.right == platform.rect.left
                 assert enemy.vel_x == -ENEMY_SPEED
@@ -135,8 +143,9 @@ class TestEnemy:
                 enemy = Enemy(101, 100)
                 platform = Platform(50, 90, 50, 60)
                 platforms = [platform]
+                obstacles = []
 
-                enemy.update(platforms)
+                enemy.update(platforms, obstacles)
 
                 assert enemy.rect.left == platform.rect.right
                 assert enemy.vel_x == ENEMY_SPEED
@@ -146,14 +155,57 @@ class TestEnemy:
             with patch('random.randint', return_value=1):
                 enemy = Enemy(100, 100)
                 platforms = []
+                obstacles = []
 
                 initial_vel_x = enemy.vel_x
                 enemy.direction_timer = enemy.direction_change_interval - 1
 
-                enemy.update(platforms)
+                enemy.update(platforms, obstacles)
 
                 assert enemy.direction_timer == 0
                 assert enemy.vel_x != initial_vel_x
+
+    def test_enemy_collision_with_obstacle_vertical(self, pygame_init):
+        with patch('random.choice', return_value=0):
+            with patch('random.randint', return_value=60):
+                enemy = Enemy(100, 100)
+                obstacle = Obstacle(90, 150, 60, 80)
+                platforms = []
+                obstacles = [obstacle]
+
+                for _ in range(20):
+                    enemy.update(platforms, obstacles)
+
+                assert enemy.on_ground is True
+                assert enemy.rect.bottom == obstacle.rect.top
+
+    def test_enemy_collision_with_obstacle_horizontal_right(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            with patch('random.randint', return_value=60):
+                enemy = Enemy(95, 100)
+                obstacle = Obstacle(100, 90, 60, 80)
+                platforms = []
+                obstacles = [obstacle]
+
+                enemy.update(platforms, obstacles)
+
+                # Enemy reverses direction when hitting obstacle
+                assert enemy.rect.right == obstacle.rect.left
+                assert enemy.vel_x == -ENEMY_SPEED
+
+    def test_enemy_collision_with_obstacle_horizontal_left(self, pygame_init):
+        with patch('random.choice', return_value=-ENEMY_SPEED):
+            with patch('random.randint', return_value=60):
+                enemy = Enemy(101, 100)
+                obstacle = Obstacle(50, 90, 60, 80)
+                platforms = []
+                obstacles = [obstacle]
+
+                enemy.update(platforms, obstacles)
+
+                # Enemy reverses direction when hitting obstacle
+                assert enemy.rect.left == obstacle.rect.right
+                assert enemy.vel_x == ENEMY_SPEED
 
     def test_enemy_try_shoot_success(self, pygame_init):
         with patch('random.choice', return_value=ENEMY_SPEED):

@@ -57,12 +57,31 @@ class TestGame:
     def test_game_enemies_created(self, game):
         assert len(game.enemies) > 0
 
+    def test_game_obstacles_created(self, game):
+        assert len(game.obstacles) > 0
+
+    def test_game_obstacles_count(self, pygame_init):
+        with patch('random.choice'):
+            with patch('random.randint'):
+                game = Game(num_players=1)
+                # Should have 5 obstacles based on setup_level
+                assert len(game.obstacles) == 5
+
+    def test_game_obstacles_in_all_sprites(self, pygame_init):
+        with patch('random.choice'):
+            with patch('random.randint'):
+                game = Game(num_players=1)
+                # All obstacles should be in all_sprites group
+                for obstacle in game.obstacles:
+                    assert obstacle in game.all_sprites
+
     def test_game_sprite_groups_initialized(self, game):
         assert isinstance(game.all_sprites, pygame.sprite.Group)
         assert isinstance(game.platforms, pygame.sprite.Group)
         assert isinstance(game.players, pygame.sprite.Group)
         assert isinstance(game.enemies, pygame.sprite.Group)
         assert isinstance(game.projectiles, pygame.sprite.Group)
+        assert isinstance(game.obstacles, pygame.sprite.Group)
 
     def test_victory_when_all_enemies_defeated(self, pygame_init):
         with patch('random.choice'):
@@ -88,19 +107,25 @@ class TestGame:
                 assert game.game_over is True
 
     def test_player_projectile_hits_enemy(self, pygame_init):
-        with patch('random.choice', return_value=2):
-            with patch('random.randint', return_value=60):
+        with patch('random.choice', return_value=0):  # Enemy won't move
+            with patch('random.randint', return_value=1000):  # Large timer
                 with patch('random.random', return_value=0.999):
                     game = Game(num_players=1)
+
+                    # Clear all obstacles to ensure projectile path is clear
+                    game.obstacles.empty()
+
                     initial_enemy_count = len(game.enemies)
 
                     player = list(game.players)[0]
-                    player.shoot(game.projectiles)
-
-                    projectile = list(game.projectiles)[0]
                     enemy = list(game.enemies)[0]
-                    projectile.rect.x = enemy.rect.x
-                    projectile.rect.y = enemy.rect.y
+
+                    # Create projectile directly at enemy position
+                    from projectile import Projectile
+                    from config import YELLOW
+                    projectile = Projectile(enemy.rect.centerx, enemy.rect.centery,
+                                          1, YELLOW, 'player')
+                    game.projectiles.add(projectile)
 
                     game.update()
 
@@ -260,3 +285,47 @@ class TestGame:
                     success = False
 
                 assert success is True
+
+    def test_projectile_blocked_by_obstacle(self, pygame_init):
+        with patch('random.choice', return_value=0):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1)
+
+                # Create projectile and obstacle
+                from projectile import Projectile
+                from config import YELLOW
+                from obstacles import Obstacle
+
+                obstacle = Obstacle(200, 200, 60, 80)
+                game.obstacles.add(obstacle)
+
+                projectile = Projectile(obstacle.rect.centerx, obstacle.rect.centery,
+                                      1, YELLOW, 'player')
+                game.projectiles.add(projectile)
+
+                game.update()
+
+                # Projectile should be destroyed by obstacle
+                assert len(game.projectiles) == 0
+
+    def test_enemy_projectile_blocked_by_obstacle(self, pygame_init):
+        with patch('random.choice', return_value=0):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1)
+
+                # Create enemy projectile and obstacle
+                from projectile import Projectile
+                from config import PURPLE
+                from obstacles import Obstacle
+
+                obstacle = Obstacle(200, 200, 60, 80)
+                game.obstacles.add(obstacle)
+
+                projectile = Projectile(obstacle.rect.centerx, obstacle.rect.centery,
+                                      -1, PURPLE, 'enemy')
+                game.projectiles.add(projectile)
+
+                game.update()
+
+                # Projectile should be destroyed by obstacle
+                assert len(game.projectiles) == 0
