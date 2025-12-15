@@ -2,7 +2,7 @@ import pygame
 from config import (SCREEN_HEIGHT, SCREEN_WIDTH, BLACK, WHITE,
                     RED, FPS, CYAN, BLUE, GREEN)
 import sys
-from platform import Platform
+from platforms import Platform
 from player import Player
 from enemy import Enemy
 

@@ -1,15 +1,6 @@
 import pytest
 import pygame
-import sys
-import os
-import importlib.util
-
-# Load the local platform module to avoid conflict with built-in platform module
-platform_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'platform.py'))
-spec = importlib.util.spec_from_file_location("platform_module", platform_path)
-platform_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(platform_module)
-Platform = platform_module.Platform
+from platforms import Platform
 
 
 @pytest.fixture
