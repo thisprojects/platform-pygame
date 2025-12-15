@@ -19,7 +19,7 @@ from obstacles import Obstacle
 
 class Game:
     def __init__(self, num_players=1):
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.DOUBLEBUF)
         pygame.display.set_caption("Platformer")
         self.clock = pygame.time.Clock()
         self.running = True

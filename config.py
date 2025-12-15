@@ -1,7 +1,7 @@
 # Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-FPS = 60
+FPS = 50
 
 # Colors
 BLACK = (0, 0, 0)
@@ -15,7 +15,7 @@ CYAN = (0, 255, 255)
 
 # Game settings
 GRAVITY = 0.8
-PLAYER_SPEED = 5
+PLAYER_SPEED = 3.5
 PLAYER_JUMP = -15
 PROJECTILE_SPEED = 8
 ENEMY_SPEED = 2
