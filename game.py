@@ -196,9 +196,9 @@ class Game:
         # Draw all sprites
         self.platforms.draw(self.screen)
         self.obstacles.draw(self.screen)
+        self.projectiles.draw(self.screen)
         self.players.draw(self.screen)
         self.enemies.draw(self.screen)
-        self.projectiles.draw(self.screen)
 
         # Draw UI
         font = pygame.font.Font(None, 36)
