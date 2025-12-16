@@ -19,32 +19,36 @@ class Enemy(Sprite):
         self.image = pygame.Surface((30, 30))
         self.image.fill(RED)
         self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+        self.x = float(x)  # Store position as floats
+        self.y = float(y)
+        self.rect.x = int(self.x)
+        self.rect.y = int(self.y)
 
         self.vel_x = random.choice([-ENEMY_SPEED, ENEMY_SPEED])
         self.vel_y = 0
         self.on_ground = False
         self.direction_timer = 0
-        self.direction_change_interval = random.randint(60, 180)  # Frames
+        self.direction_change_interval = random.uniform(1.2, 3.6)  # Seconds (was 60-180 frames)
 
-    def update(self, platforms, obstacles):
+    def update(self, platforms, obstacles, delta_time):
         # Randomly change direction
-        self.direction_timer += 1
+        self.direction_timer += delta_time
         if self.direction_timer >= self.direction_change_interval:
             self.vel_x = random.choice([-ENEMY_SPEED, ENEMY_SPEED, 0])
             self.direction_timer = 0
-            self.direction_change_interval = random.randint(60, 180)
+            self.direction_change_interval = random.uniform(1.2, 3.6)
 
-        # Apply gravity
-        self.vel_y += GRAVITY
+        # Apply gravity (multiply by delta_time)
+        self.vel_y += GRAVITY * delta_time
 
-        # Update position
-        self.rect.x += self.vel_x
+        # Update position using floats (multiply by delta_time)
+        self.x += self.vel_x * delta_time
+        self.rect.x = int(self.x)
         self.check_platform_collision(platforms, "horizontal")
         self.check_obstacle_collision(obstacles, "horizontal")
 
-        self.rect.y += self.vel_y
+        self.y += self.vel_y * delta_time
+        self.rect.y = int(self.y)
         self.on_ground = False
         self.check_platform_collision(platforms, "vertical")
         self.check_obstacle_collision(obstacles, "vertical")
@@ -52,14 +56,18 @@ class Enemy(Sprite):
         # Keep enemy on screen
         if self.rect.left < 0:
             self.rect.left = 0
+            self.x = float(self.rect.x)
             self.vel_x = ENEMY_SPEED
         if self.rect.right > SCREEN_WIDTH:
             self.rect.right = SCREEN_WIDTH
+            self.x = float(self.rect.x)
             self.vel_x = -ENEMY_SPEED
         if self.rect.top < 0:
             self.rect.top = 0
+            self.y = float(self.rect.y)
         if self.rect.bottom > SCREEN_HEIGHT:
             self.rect.bottom = SCREEN_HEIGHT
+            self.y = float(self.rect.y)
             self.vel_y = 0
             self.on_ground = True
 
@@ -69,17 +77,21 @@ class Enemy(Sprite):
                 if direction == "horizontal":
                     if self.vel_x > 0:  # Moving right
                         self.rect.right = platform.rect.left
+                        self.x = float(self.rect.x)
                         self.vel_x = -ENEMY_SPEED
                     elif self.vel_x < 0:  # Moving left
                         self.rect.left = platform.rect.right
+                        self.x = float(self.rect.x)
                         self.vel_x = ENEMY_SPEED
                 elif direction == "vertical":
                     if self.vel_y > 0:  # Falling
                         self.rect.bottom = platform.rect.top
+                        self.y = float(self.rect.y)
                         self.vel_y = 0
                         self.on_ground = True
                     elif self.vel_y < 0:  # Jumping
                         self.rect.top = platform.rect.bottom
+                        self.y = float(self.rect.y)
                         self.vel_y = 0
 
     def check_obstacle_collision(self, obstacles, direction):
@@ -88,21 +100,26 @@ class Enemy(Sprite):
                 if direction == "horizontal":
                     if self.vel_x > 0:  # Moving right
                         self.rect.right = obstacle.rect.left
+                        self.x = float(self.rect.x)
                         self.vel_x = -ENEMY_SPEED
                     elif self.vel_x < 0:  # Moving left
                         self.rect.left = obstacle.rect.right
+                        self.x = float(self.rect.x)
                         self.vel_x = ENEMY_SPEED
                 elif direction == "vertical":
                     if self.vel_y > 0:  # Falling
                         self.rect.bottom = obstacle.rect.top
+                        self.y = float(self.rect.y)
                         self.vel_y = 0
                         self.on_ground = True
                     elif self.vel_y < 0:  # Jumping
                         self.rect.top = obstacle.rect.bottom
+                        self.y = float(self.rect.y)
                         self.vel_y = 0
 
-    def try_shoot(self, projectiles_group):
-        if random.random() < ENEMY_SHOOT_CHANCE:
+    def try_shoot(self, projectiles_group, delta_time):
+        # Convert per-second probability to per-frame using delta_time
+        if random.random() < ENEMY_SHOOT_CHANCE * delta_time:
             direction = 1 if self.vel_x >= 0 else -1
             if self.vel_x == 0:
                 direction = random.choice([-1, 1])

@@ -68,7 +68,7 @@ class Player(Sprite):
         self.alive = True
         self.color = color  # Keep for backwards compatibility
 
-    def update(self, platforms, obstacles):
+    def update(self, platforms, obstacles, delta_time):
         if not self.alive:
             return
 
@@ -88,16 +88,16 @@ class Player(Sprite):
             self.vel_y = PLAYER_JUMP
             self.on_ground = False
 
-        # Apply gravity
-        self.vel_y += GRAVITY
+        # Apply gravity (multiply by delta_time)
+        self.vel_y += GRAVITY * delta_time
 
-        # Update position using floats
-        self.x += self.vel_x
+        # Update position using floats (multiply by delta_time)
+        self.x += self.vel_x * delta_time
         self.rect.x = int(self.x)
         self.check_platform_collision(platforms, "horizontal")
         self.check_obstacle_collision(obstacles, "horizontal")
 
-        self.y += self.vel_y
+        self.y += self.vel_y * delta_time
         self.rect.y = int(self.y)
         self.on_ground = False
         self.check_platform_collision(platforms, "vertical")

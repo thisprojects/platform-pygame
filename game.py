@@ -142,19 +142,19 @@ class Game:
                         if len(player_list) > 1:
                             player_list[1].shoot(self.projectiles)
 
-    def update(self):
+    def update(self, delta_time):
         if self.game_over or self.victory:
             return
 
-        # Update all sprites
+        # Update all sprites with delta_time
         for player in self.players:
-            player.update(self.platforms, self.obstacles)
+            player.update(self.platforms, self.obstacles, delta_time)
 
         for enemy in self.enemies:
-            enemy.update(self.platforms, self.obstacles)
-            enemy.try_shoot(self.projectiles)
+            enemy.update(self.platforms, self.obstacles, delta_time)
+            enemy.try_shoot(self.projectiles, delta_time)
 
-        self.projectiles.update()
+        self.projectiles.update(delta_time)
 
         # Check projectile collisions
         for projectile in self.projectiles:
@@ -243,10 +243,12 @@ class Game:
 
     def run(self):
         while self.running:
+            # Get delta_time in seconds
+            delta_time = self.clock.tick(FPS) / 1000.0
+
             self.handle_events()
-            self.update()
+            self.update(delta_time)
             self.draw()
-            self.clock.tick(FPS)
 
         pygame.quit()
         sys.exit()
