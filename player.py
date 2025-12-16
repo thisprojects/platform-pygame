@@ -17,8 +17,10 @@ class Player(Sprite):
         self.image = pygame.Surface((30, 40))
         self.image.fill(color)
         self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+        self.x = float(x)  # Store position as floats
+        self.y = float(y)
+        self.rect.x = int(self.x)
+        self.rect.y = int(self.y)
 
         self.vel_x = 0
         self.vel_y = 0
@@ -50,12 +52,14 @@ class Player(Sprite):
         # Apply gravity
         self.vel_y += GRAVITY
 
-        # Update position
-        self.rect.x += self.vel_x
+        # Update position using floats
+        self.x += self.vel_x
+        self.rect.x = int(self.x)
         self.check_platform_collision(platforms, "horizontal")
         self.check_obstacle_collision(obstacles, "horizontal")
 
-        self.rect.y += self.vel_y
+        self.y += self.vel_y
+        self.rect.y = int(self.y)
         self.on_ground = False
         self.check_platform_collision(platforms, "vertical")
         self.check_obstacle_collision(obstacles, "vertical")
@@ -63,12 +67,16 @@ class Player(Sprite):
         # Keep player on screen
         if self.rect.left < 0:
             self.rect.left = 0
+            self.x = float(self.rect.x)
         if self.rect.right > SCREEN_WIDTH:
             self.rect.right = SCREEN_WIDTH
+            self.x = float(self.rect.x)
         if self.rect.top < 0:
             self.rect.top = 0
+            self.y = float(self.rect.y)
         if self.rect.bottom > SCREEN_HEIGHT:
             self.rect.bottom = SCREEN_HEIGHT
+            self.y = float(self.rect.y)
             self.vel_y = 0
             self.on_ground = True
 
@@ -78,15 +86,19 @@ class Player(Sprite):
                 if direction == "horizontal":
                     if self.vel_x > 0:  # Moving right
                         self.rect.right = platform.rect.left
+                        self.x = float(self.rect.x)
                     elif self.vel_x < 0:  # Moving left
                         self.rect.left = platform.rect.right
+                        self.x = float(self.rect.x)
                 elif direction == "vertical":
                     if self.vel_y > 0:  # Falling
                         self.rect.bottom = platform.rect.top
+                        self.y = float(self.rect.y)
                         self.vel_y = 0
                         self.on_ground = True
                     elif self.vel_y < 0:  # Jumping
                         self.rect.top = platform.rect.bottom
+                        self.y = float(self.rect.y)
                         self.vel_y = 0
 
     def check_obstacle_collision(self, obstacles, direction):
@@ -95,15 +107,19 @@ class Player(Sprite):
                 if direction == "horizontal":
                     if self.vel_x > 0:  # Moving right
                         self.rect.right = obstacle.rect.left
+                        self.x = float(self.rect.x)
                     elif self.vel_x < 0:  # Moving left
                         self.rect.left = obstacle.rect.right
+                        self.x = float(self.rect.x)
                 elif direction == "vertical":
                     if self.vel_y > 0:  # Falling
                         self.rect.bottom = obstacle.rect.top
+                        self.y = float(self.rect.y)
                         self.vel_y = 0
                         self.on_ground = True
                     elif self.vel_y < 0:  # Jumping
                         self.rect.top = obstacle.rect.bottom
+                        self.y = float(self.rect.y)
                         self.vel_y = 0
 
     def shoot(self, projectiles_group):
