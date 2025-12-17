@@ -103,21 +103,13 @@ class Player(Sprite):
         self.check_platform_collision(platforms, "vertical")
         self.check_obstacle_collision(obstacles, "vertical")
 
-        # Keep player on screen
+        # Keep player on screen horizontally (but allow vertical movement for scrolling)
         if self.rect.left < 0:
             self.rect.left = 0
             self.x = float(self.rect.x)
         if self.rect.right > SCREEN_WIDTH:
             self.rect.right = SCREEN_WIDTH
             self.x = float(self.rect.x)
-        if self.rect.top < 0:
-            self.rect.top = 0
-            self.y = float(self.rect.y)
-        if self.rect.bottom > SCREEN_HEIGHT:
-            self.rect.bottom = SCREEN_HEIGHT
-            self.y = float(self.rect.y)
-            self.vel_y = 0
-            self.on_ground = True
 
         # Update sprite direction
         self._update_animation()

@@ -6,7 +6,7 @@ pygame.init()
 
 
 def main():
-    print("=== Platformer Game ===")
+    print("=== Tower Climber Game ===")
     print("Select number of players:")
     print("1. Single Player")
     print("2. Two Players")
@@ -21,7 +21,9 @@ def main():
         num_players = 1
         print("\nControls: W=Jump, A=Left, D=Right, SPACE=Shoot")
 
-    print("\nObjective: Eliminate all enemies!")
+    print("\nObjective: Climb to the top of the tower!")
+    print("Defeat enemies along the way!")
+    print("Don't fall off the bottom of the screen!")
     print("Starting game...\n")
 
     game = Game(num_players)
