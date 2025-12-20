@@ -8,7 +8,7 @@
 #   'P' = Player spawn point
 #   'X' = Exit
 
-# Each map is 20 characters wide to fit 800px screen (40px per tile)
+# Each map is 20 characters wide to fit 1280px screen (64px per tile)
 
 TOWER_LEVEL_1 = [
     "                    ",
@@ -105,11 +105,7 @@ TOWER_LEVEL_2 = [
     "                    ",
     "         OOO        ",
     "      ---------     ",
-    # Ground
-    "                    ",
-    "                    ",
     "         P          ",
-    "                    ",
     "--------------------",
 ]
 

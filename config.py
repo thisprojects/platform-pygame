@@ -1,6 +1,6 @@
 # Constants
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 720
 FPS = 50
 
 # Colors
@@ -18,7 +18,7 @@ ORANGE = (255, 165, 0)
 # Game settings (all speeds are now per second, not per frame)
 GRAVITY = 2000  # pixels per second squared (was 0.8 per frame² * 50² FPS)
 PLAYER_SPEED = 175  # pixels per second (was 3.5 per frame * 50 FPS)
-PLAYER_JUMP = -750  # pixels per second (was -15 per frame * 50 FPS)
+PLAYER_JUMP = -928  # pixels per second (increased by 10% from -844)
 PLAYER_CLIMB_SPEED = 150  # pixels per second for climbing ladders
 PROJECTILE_SPEED = 400  # pixels per second (was 8 per frame * 50 FPS)
 ENEMY_SPEED = 100  # pixels per second (was 2 per frame * 50 FPS)

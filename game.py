@@ -42,7 +42,7 @@ class Game:
         self.camera_y = 0  # Camera vertical offset
 
         # Map loader
-        self.map_loader = MapLoader(tile_size=40)
+        self.map_loader = MapLoader(tile_size=64)
 
         # Store spawn points from map
         self.spawn_points = []

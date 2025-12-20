@@ -29,8 +29,8 @@ class MapLoader:
                 y = row_idx * self.tile_size
 
                 if char == '-':
-                    # Platform tile
-                    platforms.append((x, y, self.tile_size, self.tile_size))
+                    # Platform tile (50% thinner height)
+                    platforms.append((x, y, self.tile_size, self.tile_size // 2))
                 elif char == 'E':
                     # Enemy spawn
                     enemies.append((x, y))
