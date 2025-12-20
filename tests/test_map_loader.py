@@ -50,7 +50,7 @@ class TestMapLoader:
         # Should have 1 merged platform (4 tiles merged horizontally)
         assert len(result['platforms']) == 1
         platform = result['platforms'][0]
-        assert platform == (0, 0, 160, 40)  # 4 tiles * 40px = 160px wide
+        assert platform == (0, 0, 160, 20)  # 4 tiles * 40px = 160px wide, height = tile_size // 2
 
     def test_load_enemy(self, map_loader):
         enemy_map = [
@@ -135,7 +135,7 @@ class TestMapLoader:
         result = map_loader.load_map(platform_map)
 
         assert len(result['platforms']) == 1
-        assert result['platforms'][0] == (0, 0, 120, 40)
+        assert result['platforms'][0] == (0, 0, 120, 20)
 
     def test_merge_platforms_separated(self, map_loader):
         # Separated platforms should not merge
@@ -219,5 +219,5 @@ class TestMapLoader:
 
         result = loader.load_map(simple_map)
 
-        # With tile_size=20, two tiles should be 40px wide
-        assert result['platforms'][0] == (0, 0, 40, 20)
+        # With tile_size=20, two tiles should be 40px wide, height = tile_size // 2
+        assert result['platforms'][0] == (0, 0, 40, 10)
