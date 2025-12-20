@@ -11,20 +11,22 @@ from config import (
     GREEN,
 )
 import sys
-import random
-from platforms import Platform
 from player import Player
-from enemy import Enemy
-from obstacles import Obstacle
+from exit import Exit
+from map_loader import MapLoader
+from maps import ALL_MAPS
 
 
 class Game:
-    def __init__(self, num_players=1):
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.DOUBLEBUF)
+    def __init__(self, num_players=1, map_name="test"):
+        self.screen = pygame.display.set_mode(
+            (SCREEN_WIDTH, SCREEN_HEIGHT), pygame.DOUBLEBUF
+        )
         pygame.display.set_caption("Tower Climber")
         self.clock = pygame.time.Clock()
         self.running = True
         self.num_players = min(num_players, 2)
+        self.map_name = map_name
 
         # Sprite groups
         self.all_sprites = pygame.sprite.Group()
@@ -33,105 +35,69 @@ class Game:
         self.enemies = pygame.sprite.Group()
         self.projectiles = pygame.sprite.Group()
         self.obstacles = pygame.sprite.Group()
+        self.ladders = pygame.sprite.Group()
+        self.exit_sprite = None
 
-        # Tower/Camera settings
+        # Camera settings
         self.camera_y = 0  # Camera vertical offset
-        self.tower_height = 10000  # Total height of the tower
-        self.platform_generation_threshold = SCREEN_HEIGHT * 2  # Generate platforms ahead
-        self.highest_platform_y = 0  # Track highest generated platform
+
+        # Map loader
+        self.map_loader = MapLoader(tile_size=40)
+
+        # Store spawn points from map
+        self.spawn_points = []
 
         self.setup_level()
         self.setup_players()
+        self.initialize_camera()
 
         self.game_over = False
         self.victory = False
 
     def setup_level(self):
-        # Generate initial platforms for the tower
-        # Start with ground platform
-        ground = Platform(0, SCREEN_HEIGHT - 20, SCREEN_WIDTH, 20)
-        self.platforms.add(ground)
-        self.all_sprites.add(ground)
+        # Load map data
+        map_data = ALL_MAPS.get(self.map_name, ALL_MAPS["test"])
 
-        # Set starting position for generation
-        self.highest_platform_y = SCREEN_HEIGHT - 20
+        # Parse the map
+        map_objects = self.map_loader.load_map(map_data)
+        sprites = self.map_loader.create_sprites(map_objects)
 
-        # Generate initial set of platforms
-        self.generate_platforms_upward()
-
-    def generate_platforms_upward(self):
-        # Generate platforms from highest_platform_y up to the threshold
-        target_y = self.highest_platform_y - self.platform_generation_threshold
-
-        # Don't generate below the tower top
-        if self.highest_platform_y <= -self.tower_height:
-            return
-
-        current_y = self.highest_platform_y
-        new_platforms = []
-
-        # Fixed platform properties
-        platform_width = int(SCREEN_WIDTH / 3)  # Exactly 1/3 of screen width (266 pixels)
-        platform_height = 15
-        player_height = 60  # Height of player sprite
-
-        # Vertical spacing: at least 1 player height + 25%
-        vertical_gap = int(player_height * 1.25)  # 75 pixels
-
-        # Staggered positions: alternating left-right pattern with overlap
-        # Player can jump ~110 pixels horizontally at 75px height
-        # Use 2 positions that overlap to ensure all jumps are reachable
-
-        # Position platforms with significant overlap for safety
-        left_x = 100  # Left platform: 100-366
-        right_x = 280  # Right platform: 280-546 (overlaps left by 86 pixels)
-
-        positions = [left_x, right_x]
-
-        # Determine starting position based on number of existing platforms
-        # Ground platform doesn't count, so subtract 1 to start at position 0 (left)
-        platform_count = len(self.platforms) - 1  # Subtract 1 for ground platform
-        position_index = platform_count % 2
-
-        while current_y > target_y and current_y > -self.tower_height:
-            current_y -= vertical_gap
-
-            # Get position for this platform (cycles through left, center, right)
-            platform_x = positions[position_index]
-
-            # Create the platform
-            platform = Platform(platform_x, current_y, platform_width, platform_height)
+        # Add platforms
+        for platform in sprites["platforms"]:
             self.platforms.add(platform)
             self.all_sprites.add(platform)
-            new_platforms.append(platform)
 
-            # Move to next position in cycle
-            position_index = (position_index + 1) % 2
+        # Add enemies
+        for enemy in sprites["enemies"]:
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
 
-        # Update highest platform position
-        self.highest_platform_y = current_y
+        # Add obstacles
+        for obstacle in sprites["obstacles"]:
+            self.obstacles.add(obstacle)
+            self.all_sprites.add(obstacle)
 
-        # Generate enemies on some of the new platforms
-        self.generate_enemies_on_platforms(new_platforms)
+        # Add ladders
+        for ladder in sprites["ladders"]:
+            self.ladders.add(ladder)
+            self.all_sprites.add(ladder)
 
-    def generate_enemies_on_platforms(self, platforms):
-        # Spawn enemies on approximately 30% of platforms
-        for platform in platforms:
-            # Skip ground platform and very low platforms
-            if platform.rect.y >= SCREEN_HEIGHT - 100:
-                continue
+        # Store spawn points for player setup
+        self.spawn_points = sprites["spawn_points"]
 
-            # 30% chance to spawn an enemy on this platform
-            if random.random() < 0.3:
-                # Place enemy on top of platform, roughly in the middle
-                enemy_x = platform.rect.x + platform.rect.width // 2 - 15
-                enemy_y = platform.rect.y - 40  # Enemy height is about 40px
-
-                enemy = Enemy(enemy_x, enemy_y)
-                self.enemies.add(enemy)
-                self.all_sprites.add(enemy)
+        # Create exit sprite
+        if sprites["exit_pos"]:
+            exit_x, exit_y = sprites["exit_pos"]
+            self.exit_sprite = Exit(exit_x, exit_y)
+            self.all_sprites.add(self.exit_sprite)
 
     def setup_players(self):
+        # Use spawn points from map, or default positions if not available
+        if len(self.spawn_points) > 0:
+            spawn_x, spawn_y = self.spawn_points[0]
+        else:
+            spawn_x, spawn_y = 100, SCREEN_HEIGHT - 100
+
         # Player 1 controls
         player1_controls = {
             "left": pygame.K_a,
@@ -139,11 +105,17 @@ class Game:
             "jump": pygame.K_w,
             "shoot": pygame.K_SPACE,
         }
-        player1 = Player(100, SCREEN_HEIGHT - 100, BLUE, player1_controls)
+        player1 = Player(spawn_x, spawn_y, BLUE, player1_controls)
         self.players.add(player1)
         self.all_sprites.add(player1)
 
         if self.num_players == 2:
+            # Player 2 spawn - use second spawn point if available, or offset from first
+            if len(self.spawn_points) > 1:
+                spawn2_x, spawn2_y = self.spawn_points[1]
+            else:
+                spawn2_x, spawn2_y = spawn_x + 60, spawn_y
+
             # Player 2 controls
             player2_controls = {
                 "left": pygame.K_LEFT,
@@ -151,11 +123,17 @@ class Game:
                 "jump": pygame.K_UP,
                 "shoot": pygame.K_RSHIFT,
             }
-            player2 = Player(
-                SCREEN_WIDTH - 130, SCREEN_HEIGHT - 100, CYAN, player2_controls
-            )
+            player2 = Player(spawn2_x, spawn2_y, CYAN, player2_controls)
             self.players.add(player2)
             self.all_sprites.add(player2)
+
+    def initialize_camera(self):
+        # Position camera so player spawn is visible at bottom of screen
+        if len(self.spawn_points) > 0:
+            spawn_y = self.spawn_points[0][1]
+            # Position spawn point in lower portion of screen (about 2/3 down)
+            target_screen_y = SCREEN_HEIGHT * 2 // 3
+            self.camera_y = spawn_y - target_screen_y
 
     def update_camera(self):
         # Get the highest player position
@@ -164,15 +142,20 @@ class Game:
 
         highest_player_y = min(player.rect.y for player in self.players if player.alive)
 
-        # Camera follows player when they're in the upper half of the screen
-        camera_threshold = SCREEN_HEIGHT // 3
-        if highest_player_y < camera_threshold:
-            # Move camera up
-            self.camera_y = highest_player_y - camera_threshold
+        # Calculate player's position on screen
+        player_screen_y = highest_player_y - self.camera_y
 
-        # Generate more platforms if needed
-        if self.camera_y < self.highest_platform_y + self.platform_generation_threshold:
-            self.generate_platforms_upward()
+        # Camera follows player to keep them in a comfortable viewing area
+        # Define upper and lower thresholds
+        upper_threshold = SCREEN_HEIGHT // 3  # Upper third of screen
+        lower_threshold = SCREEN_HEIGHT * 2 // 3  # Lower third of screen
+
+        if player_screen_y < upper_threshold:
+            # Player is too high on screen - move camera up
+            self.camera_y = highest_player_y - upper_threshold
+        elif player_screen_y > lower_threshold:
+            # Player is too low on screen - move camera down
+            self.camera_y = highest_player_y - lower_threshold
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -182,7 +165,7 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if self.game_over or self.victory:
                     if event.key == pygame.K_r:
-                        self.__init__(self.num_players)  # Restart
+                        self.__init__(self.num_players, self.map_name)  # Restart
                     elif event.key == pygame.K_q:
                         self.running = False
                 else:
@@ -207,7 +190,7 @@ class Game:
 
         # Update all sprites with delta_time
         for player in self.players:
-            player.update(self.platforms, self.obstacles, delta_time)
+            player.update(self.platforms, self.obstacles, self.ladders, delta_time)
 
         for enemy in self.enemies:
             enemy.update(self.platforms, self.obstacles, delta_time)
@@ -241,10 +224,11 @@ class Game:
                         player.kill()
                         projectile.kill()
 
-        # Check if player reached the top
-        for player in self.players:
-            if player.alive and player.rect.y <= -self.tower_height + 100:
-                self.victory = True
+        # Check if player reached the exit
+        if self.exit_sprite:
+            for player in self.players:
+                if player.alive and player.rect.colliderect(self.exit_sprite.rect):
+                    self.victory = True
 
         # Check if player fell off the bottom (below camera view)
         alive_players = [p for p in self.players if p.alive]
@@ -252,6 +236,11 @@ class Game:
             if player.rect.y > self.camera_y + SCREEN_HEIGHT + 100:
                 player.alive = False
                 player.kill()
+
+        # Remove enemies that fell too far off screen
+        for enemy in list(self.enemies):
+            if enemy.rect.y > self.camera_y + SCREEN_HEIGHT + 200:
+                enemy.kill()
 
         # Check lose condition
         alive_players = [p for p in self.players if p.alive]
@@ -262,6 +251,14 @@ class Game:
         self.screen.fill(BLACK)
 
         # Draw all sprites with camera offset
+        # Draw ladders first (in background)
+        for ladder in self.ladders:
+            offset_rect = ladder.rect.copy()
+            offset_rect.y -= self.camera_y
+            # Only draw if on screen
+            if -100 < offset_rect.y < SCREEN_HEIGHT + 100:
+                self.screen.blit(ladder.image, offset_rect)
+
         for platform in self.platforms:
             offset_rect = platform.rect.copy()
             offset_rect.y -= self.camera_y
@@ -292,20 +289,38 @@ class Game:
             if -100 < offset_rect.y < SCREEN_HEIGHT + 100:
                 self.screen.blit(enemy.image, offset_rect)
 
+        # Draw exit
+        if self.exit_sprite:
+            offset_rect = self.exit_sprite.rect.copy()
+            offset_rect.y -= self.camera_y
+            if -100 < offset_rect.y < SCREEN_HEIGHT + 100:
+                self.screen.blit(self.exit_sprite.image, offset_rect)
+
         # Draw UI
         font = pygame.font.Font(None, 36)
 
-        # Height climbed (distance from starting ground)
-        if len(self.players) > 0:
-            highest_player = min(player.rect.y for player in self.players if player.alive) if any(p.alive for p in self.players) else SCREEN_HEIGHT
-            height_climbed = max(0, (SCREEN_HEIGHT - 20) - highest_player)
+        # Height climbed (distance from spawn point)
+        if len(self.players) > 0 and len(self.spawn_points) > 0:
+            spawn_y = self.spawn_points[0][1]
+            highest_player = (
+                min(player.rect.y for player in self.players if player.alive)
+                if any(p.alive for p in self.players)
+                else spawn_y
+            )
+            height_climbed = max(0, spawn_y - highest_player)
             height_text = font.render(f"Height: {int(height_climbed)}", True, WHITE)
             self.screen.blit(height_text, (10, 10))
 
-            # Progress to top
-            progress = min(100, int((height_climbed / self.tower_height) * 100))
-            progress_text = font.render(f"Progress: {progress}%", True, WHITE)
-            self.screen.blit(progress_text, (10, 50))
+            # Progress to exit
+            if self.exit_sprite:
+                total_height = spawn_y - self.exit_sprite.rect.y
+                progress = (
+                    min(100, int((height_climbed / total_height) * 100))
+                    if total_height > 0
+                    else 0
+                )
+                progress_text = font.render(f"Progress: {progress}%", True, WHITE)
+                self.screen.blit(progress_text, (10, 50))
 
         # Enemy count
         enemy_text = font.render(f"Enemies: {len(self.enemies)}", True, WHITE)

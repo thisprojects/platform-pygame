@@ -53,7 +53,7 @@ class Enemy(Sprite):
         self.check_platform_collision(platforms, "vertical")
         self.check_obstacle_collision(obstacles, "vertical")
 
-        # Keep enemy on screen
+        # Keep enemy within horizontal screen bounds
         if self.rect.left < 0:
             self.rect.left = 0
             self.x = float(self.rect.x)
@@ -62,14 +62,6 @@ class Enemy(Sprite):
             self.rect.right = SCREEN_WIDTH
             self.x = float(self.rect.x)
             self.vel_x = -ENEMY_SPEED
-        if self.rect.top < 0:
-            self.rect.top = 0
-            self.y = float(self.rect.y)
-        if self.rect.bottom > SCREEN_HEIGHT:
-            self.rect.bottom = SCREEN_HEIGHT
-            self.y = float(self.rect.y)
-            self.vel_y = 0
-            self.on_ground = True
 
     def check_platform_collision(self, platforms, direction):
         for platform in platforms:
