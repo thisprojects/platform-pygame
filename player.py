@@ -7,7 +7,6 @@ from config import (
     PLAYER_JUMP,
     PLAYER_CLIMB_SPEED,
     GRAVITY,
-    SCREEN_HEIGHT,
     SCREEN_WIDTH,
     YELLOW,
 )
@@ -26,21 +25,29 @@ class Player(Sprite):
         self.idle_state = 0
         self.idle_length = 11
         player_idle = SpriteSheet(pygame.image.load("./Assets/Player/player_idle.png"))
-        self.idle_frames = [player_idle.getimage(32*x, 0, 32, 32) for x in range(self.idle_length)]
+        self.idle_frames = [
+            player_idle.getimage(32 * x, 0, 32, 32) for x in range(self.idle_length)
+        ]
         self.idle_frames_flipped = []
         for i in range(len(self.idle_frames)):
             self.idle_frames[i] = pygame.transform.scale(self.idle_frames[i], (45, 60))
-            self.idle_frames_flipped.append(pygame.transform.flip(self.idle_frames[i], True, False))
+            self.idle_frames_flipped.append(
+                pygame.transform.flip(self.idle_frames[i], True, False)
+            )
 
         # Run animation (12 frames)
         self.run_state = 0
         self.run_length = 12
         player_run = SpriteSheet(pygame.image.load("./Assets/Player/player_run.png"))
-        self.run_frames = [player_run.getimage(32*x, 0, 32, 32) for x in range(self.run_length)]
+        self.run_frames = [
+            player_run.getimage(32 * x, 0, 32, 32) for x in range(self.run_length)
+        ]
         self.run_frames_flipped = []
         for i in range(len(self.run_frames)):
             self.run_frames[i] = pygame.transform.scale(self.run_frames[i], (45, 60))
-            self.run_frames_flipped.append(pygame.transform.flip(self.run_frames[i], True, False))
+            self.run_frames_flipped.append(
+                pygame.transform.flip(self.run_frames[i], True, False)
+            )
 
         # Jump and fall (single frames)
         self.jump_frame = pygame.transform.scale(
@@ -111,8 +118,9 @@ class Player(Sprite):
                 self.facing_right = True
 
             # Jump off ladder
-            if (keys[self.controls["left"]] or keys[self.controls["right"]]) and \
-               (keys[pygame.K_SPACE] or keys[pygame.K_RSHIFT]):
+            if (keys[self.controls["left"]] or keys[self.controls["right"]]) and (
+                keys[pygame.K_SPACE] or keys[pygame.K_RSHIFT]
+            ):
                 # Player wants to jump off sideways
                 self.climbing = False
                 self.vel_y = PLAYER_JUMP * 0.7  # Smaller jump when jumping off ladder

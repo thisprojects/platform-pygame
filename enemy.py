@@ -3,7 +3,6 @@ import pygame
 from config import (
     RED,
     ENEMY_SPEED,
-    SCREEN_HEIGHT,
     SCREEN_WIDTH,
     GRAVITY,
     ENEMY_SHOOT_CHANCE,
@@ -28,7 +27,9 @@ class Enemy(Sprite):
         self.vel_y = 0
         self.on_ground = False
         self.direction_timer = 0
-        self.direction_change_interval = random.uniform(1.2, 3.6)  # Seconds (was 60-180 frames)
+        self.direction_change_interval = random.uniform(
+            1.2, 3.6
+        )  # Seconds (was 60-180 frames)
 
     def update(self, platforms, obstacles, delta_time):
         # Randomly change direction
