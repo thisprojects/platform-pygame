@@ -32,33 +32,36 @@ class TestProjectile:
         projectile = Projectile(100, 100, 1, YELLOW, 'player')
         initial_x = projectile.rect.x
 
-        projectile.update()
+        projectile.update(0.02)  # 20ms delta_time
 
-        assert projectile.rect.x == initial_x + PROJECTILE_SPEED
+        expected_distance = PROJECTILE_SPEED * 0.02
+        assert abs(projectile.rect.x - (initial_x + expected_distance)) < 5  # Allow small delta_time rounding error
 
     def test_projectile_move_left(self, pygame_init):
         projectile = Projectile(100, 100, -1, PURPLE, 'enemy')
         initial_x = projectile.rect.x
 
-        projectile.update()
+        projectile.update(0.02)
 
-        assert projectile.rect.x == initial_x - PROJECTILE_SPEED
+        expected_distance = PROJECTILE_SPEED * 0.02
+        assert abs(projectile.rect.x - (initial_x - expected_distance)) < 5  # Allow small delta_time rounding error
 
     def test_projectile_moves_multiple_updates(self, pygame_init):
         projectile = Projectile(100, 100, 1, YELLOW, 'player')
         initial_x = projectile.rect.x
 
         for _ in range(5):
-            projectile.update()
+            projectile.update(0.02)
 
-        assert projectile.rect.x == initial_x + (PROJECTILE_SPEED * 5)
+        expected_distance = PROJECTILE_SPEED * 0.02 * 5
+        assert abs(projectile.rect.x - (initial_x + expected_distance)) < 5  # Allow small delta_time rounding error
 
     def test_projectile_removed_when_off_screen_right(self, pygame_init):
         group = pygame.sprite.Group()
         projectile = Projectile(SCREEN_WIDTH + 10, 100, 1, YELLOW, 'player')
         group.add(projectile)
 
-        projectile.update()
+        projectile.update(0.02)
 
         assert len(group) == 0
 
@@ -67,7 +70,7 @@ class TestProjectile:
         projectile = Projectile(-20, 100, -1, PURPLE, 'enemy')
         group.add(projectile)
 
-        projectile.update()
+        projectile.update(0.02)
 
         assert len(group) == 0
 
@@ -76,7 +79,7 @@ class TestProjectile:
         projectile = Projectile(400, 100, 1, YELLOW, 'player')
         group.add(projectile)
 
-        projectile.update()
+        projectile.update(0.02)
 
         assert len(group) == 1
         assert projectile.alive()

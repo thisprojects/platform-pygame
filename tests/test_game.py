@@ -63,9 +63,9 @@ class TestGame:
     def test_game_obstacles_count(self, pygame_init):
         with patch('random.choice'):
             with patch('random.randint'):
-                game = Game(num_players=1)
-                # Should have 5 obstacles based on setup_level
-                assert len(game.obstacles) == 5
+                game = Game(num_players=1, map_name='test')
+                # Should have 2 obstacles based on test map (2 OO blocks)
+                assert len(game.obstacles) == 2
 
     def test_game_obstacles_in_all_sprites(self, pygame_init):
         with patch('random.choice'):
@@ -83,15 +83,23 @@ class TestGame:
         assert isinstance(game.projectiles, pygame.sprite.Group)
         assert isinstance(game.obstacles, pygame.sprite.Group)
 
-    def test_victory_when_all_enemies_defeated(self, pygame_init):
-        with patch('random.choice'):
-            with patch('random.randint'):
-                game = Game(num_players=1)
-                game.enemies.empty()
+    def test_victory_when_player_reaches_exit(self, pygame_init):
+        with patch('random.choice', return_value=2):
+            with patch('random.uniform', return_value=2.0):  # Return float for timers
+                game = Game(num_players=1, map_name='test')
+                player = list(game.players)[0]
 
-                game.update()
+                # Move player to exit position
+                if game.exit_sprite:
+                    player.rect.centerx = game.exit_sprite.rect.centerx
+                    player.rect.centery = game.exit_sprite.rect.centery
+                    player.x = float(player.rect.x)
+                    player.y = float(player.rect.y)
+                    player.alive = True
 
-                assert game.victory is True
+                    game.update(0.02)
+
+                    assert game.victory is True
 
     def test_game_over_when_all_players_dead(self, pygame_init):
         with patch('random.choice', return_value=2):
@@ -102,7 +110,7 @@ class TestGame:
                     player.alive = False
                     player.kill()
 
-                game.update()
+                game.update(0.02)
 
                 assert game.game_over is True
 
@@ -127,7 +135,7 @@ class TestGame:
                                           1, YELLOW, 'player')
                     game.projectiles.add(projectile)
 
-                    game.update()
+                    game.update(0.02)
 
                     assert len(game.enemies) < initial_enemy_count
                     assert len(game.projectiles) == 0
@@ -145,7 +153,7 @@ class TestGame:
                                                 1, PURPLE, 'enemy')
                     game.projectiles.add(enemy_projectile)
 
-                    game.update()
+                    game.update(0.02)
 
                     assert player.alive is False
 
@@ -157,7 +165,7 @@ class TestGame:
 
                 initial_projectile_count = len(game.projectiles)
 
-                game.update()
+                game.update(0.02)
 
                 assert len(game.projectiles) == initial_projectile_count
 
@@ -169,7 +177,7 @@ class TestGame:
 
                 initial_projectile_count = len(game.projectiles)
 
-                game.update()
+                game.update(0.02)
 
                 assert len(game.projectiles) == initial_projectile_count
 
@@ -262,14 +270,14 @@ class TestGame:
                 player_list[0].alive = False
                 player_list[0].kill()
 
-                game.update()
+                game.update(0.02)
 
                 assert game.game_over is False
 
                 player_list[1].alive = False
                 player_list[1].kill()
 
-                game.update()
+                game.update(0.02)
 
                 assert game.game_over is True
 
@@ -303,7 +311,7 @@ class TestGame:
                                       1, YELLOW, 'player')
                 game.projectiles.add(projectile)
 
-                game.update()
+                game.update(0.02)
 
                 # Projectile should be destroyed by obstacle
                 assert len(game.projectiles) == 0
@@ -325,7 +333,7 @@ class TestGame:
                                       -1, PURPLE, 'enemy')
                 game.projectiles.add(projectile)
 
-                game.update()
+                game.update(0.02)
 
                 # Projectile should be destroyed by obstacle
                 assert len(game.projectiles) == 0

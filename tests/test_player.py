@@ -24,6 +24,7 @@ from config import (PLAYER_SPEED, PLAYER_JUMP, GRAVITY, SCREEN_WIDTH,
 @pytest.fixture
 def pygame_init():
     pygame.init()
+    pygame.display.set_mode((800, 600))  # Need display mode for sprite images
     yield
     pygame.quit()
 
@@ -69,10 +70,12 @@ class TestPlayer:
         mock_keys.return_value = keys_pressed
         initial_x = player.rect.x
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.facing_right is True
-        assert player.rect.x == initial_x + PLAYER_SPEED
+        # With delta_time=0.02, movement is PLAYER_SPEED * 0.02 = 3.5 pixels
+        expected_x = initial_x + (PLAYER_SPEED * 0.02)
+        assert abs(player.rect.x - expected_x) < 1
 
     @patch('pygame.key.get_pressed')
     def test_player_move_left(self, mock_keys, pygame_init, player_controls):
@@ -86,10 +89,11 @@ class TestPlayer:
         mock_keys.return_value = keys_pressed
         initial_x = player.rect.x
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.facing_right is False
-        assert player.rect.x == initial_x - PLAYER_SPEED
+        expected_x = initial_x - (PLAYER_SPEED * 0.02)
+        assert abs(player.rect.x - expected_x) < 1
 
     @patch('pygame.key.get_pressed')
     def test_player_gravity_applied(self, mock_keys, pygame_init, player_controls):
@@ -100,13 +104,15 @@ class TestPlayer:
         from collections import defaultdict
         keys_pressed = defaultdict(bool)
         mock_keys.return_value = keys_pressed
-        initial_y = player.rect.y
+        initial_y = player.y  # Use float position for precision
         initial_vel_y = player.vel_y
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
-        assert player.vel_y == initial_vel_y + GRAVITY
-        assert player.rect.y > initial_y
+        # Gravity is applied as GRAVITY * delta_time
+        expected_vel_y = initial_vel_y + (GRAVITY * 0.02)
+        assert abs(player.vel_y - expected_vel_y) < 1
+        assert player.y > initial_y  # Player should fall
 
     @patch('pygame.key.get_pressed')
     def test_player_jump(self, mock_keys, pygame_init, player_controls):
@@ -120,10 +126,11 @@ class TestPlayer:
         keys_pressed[player_controls['jump']] = True
         mock_keys.return_value = keys_pressed
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
-        # After update, gravity is applied, so vel_y = PLAYER_JUMP + GRAVITY
-        assert player.vel_y == PLAYER_JUMP + GRAVITY
+        # After update, gravity is applied: vel_y = PLAYER_JUMP + (GRAVITY * delta_time)
+        expected_vel_y = PLAYER_JUMP + (GRAVITY * 0.02)
+        assert abs(player.vel_y - expected_vel_y) < 1
         assert player.on_ground is False
 
     @patch('pygame.key.get_pressed')
@@ -138,7 +145,7 @@ class TestPlayer:
         keys_pressed[player_controls['jump']] = True
         mock_keys.return_value = keys_pressed
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.vel_y != PLAYER_JUMP
 
@@ -153,7 +160,7 @@ class TestPlayer:
         keys_pressed[player_controls['left']] = True
         mock_keys.return_value = keys_pressed
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.rect.left >= 0
 
@@ -168,31 +175,36 @@ class TestPlayer:
         keys_pressed[player_controls['right']] = True
         mock_keys.return_value = keys_pressed
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.rect.right <= SCREEN_WIDTH
 
     @patch('pygame.key.get_pressed')
     def test_player_lands_on_ground(self, mock_keys, pygame_init, player_controls):
-        player = Player(100, SCREEN_HEIGHT - 50, BLUE, player_controls)
-        platforms = []
+        player = Player(100, 400, BLUE, player_controls)
+        # Add a ground platform at bottom
+        ground = Platform(0, SCREEN_HEIGHT - 20, SCREEN_WIDTH, 20)
+        platforms = [ground]
         obstacles = []
 
         from collections import defaultdict
         keys_pressed = defaultdict(bool)
         mock_keys.return_value = keys_pressed
 
-        for _ in range(10):
-            player.update(platforms, obstacles)
+        # Need more iterations with delta_time to fall and land
+        for _ in range(100):
+            player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
+            if player.on_ground:
+                break
 
-        assert player.rect.bottom == SCREEN_HEIGHT
         assert player.on_ground is True
         assert player.vel_y == 0
+        assert player.rect.bottom == ground.rect.top
 
     @patch('pygame.key.get_pressed')
     def test_player_collision_with_platform(self, mock_keys, pygame_init, player_controls):
         player = Player(100, 100, BLUE, player_controls)
-        platform = Platform(90, 150, 100, 20)
+        platform = Platform(90, 200, 100, 20)
         platforms = [platform]
         obstacles = []
 
@@ -200,8 +212,11 @@ class TestPlayer:
         keys_pressed = defaultdict(bool)
         mock_keys.return_value = keys_pressed
 
-        for _ in range(20):
-            player.update(platforms, obstacles)
+        # Need more iterations with delta_time for player to fall onto platform
+        for _ in range(100):
+            player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
+            if player.on_ground:
+                break
 
         assert player.on_ground is True
         assert player.rect.bottom == platform.rect.top
@@ -258,7 +273,7 @@ class TestPlayer:
         mock_keys.return_value = keys_pressed
         initial_x = player.rect.x
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.rect.x == initial_x
 
@@ -274,14 +289,14 @@ class TestPlayer:
         keys_pressed[player_controls['right']] = True
         mock_keys.return_value = keys_pressed
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.rect.right <= platform.rect.left
 
     @patch('pygame.key.get_pressed')
     def test_player_collision_with_obstacle_vertical(self, mock_keys, pygame_init, player_controls):
         player = Player(100, 100, BLUE, player_controls)
-        obstacle = Obstacle(90, 150, 60, 80)
+        obstacle = Obstacle(90, 200, 60, 80)
         platforms = []
         obstacles = [obstacle]
 
@@ -289,8 +304,10 @@ class TestPlayer:
         keys_pressed = defaultdict(bool)
         mock_keys.return_value = keys_pressed
 
-        for _ in range(20):
-            player.update(platforms, obstacles)
+        for _ in range(100):
+            player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
+            if player.on_ground:
+                break
 
         assert player.on_ground is True
         assert player.rect.bottom == obstacle.rect.top
@@ -307,7 +324,7 @@ class TestPlayer:
         keys_pressed[player_controls['right']] = True
         mock_keys.return_value = keys_pressed
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.rect.right <= obstacle.rect.left
 
@@ -323,15 +340,15 @@ class TestPlayer:
         keys_pressed[player_controls['left']] = True
         mock_keys.return_value = keys_pressed
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         assert player.rect.left >= obstacle.rect.right
 
     @patch('pygame.key.get_pressed')
     def test_player_collision_with_multiple_obstacles(self, mock_keys, pygame_init, player_controls):
         player = Player(100, 50, BLUE, player_controls)
-        obstacle1 = Obstacle(90, 100, 60, 80)
-        obstacle2 = Obstacle(200, 100, 60, 80)
+        obstacle1 = Obstacle(90, 150, 60, 80)
+        obstacle2 = Obstacle(200, 150, 60, 80)
         platforms = []
         obstacles = [obstacle1, obstacle2]
 
@@ -339,8 +356,10 @@ class TestPlayer:
         keys_pressed = defaultdict(bool)
         mock_keys.return_value = keys_pressed
 
-        for _ in range(20):
-            player.update(platforms, obstacles)
+        for _ in range(100):
+            player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
+            if player.on_ground:
+                break
 
         assert player.on_ground is True
         assert player.rect.bottom == obstacle1.rect.top
@@ -358,7 +377,7 @@ class TestPlayer:
         keys_pressed[player_controls['jump']] = True
         mock_keys.return_value = keys_pressed
 
-        player.update(platforms, obstacles)
+        player.update(platforms, obstacles, pygame.sprite.Group(), 0.02)
 
         # Player should hit bottom of obstacle when jumping
         assert player.rect.top >= obstacle.rect.bottom or player.rect.bottom <= obstacle.rect.top
