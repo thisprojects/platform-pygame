@@ -26,18 +26,11 @@ class Enemy(Sprite):
         self.vel_x = random.choice([-ENEMY_SPEED, ENEMY_SPEED])
         self.vel_y = 0
         self.on_ground = False
-        self.direction_timer = 0
-        self.direction_change_interval = random.uniform(
-            1.2, 3.6
-        )  # Seconds (was 60-180 frames)
 
     def update(self, platforms, obstacles, delta_time):
-        # Randomly change direction
-        self.direction_timer += delta_time
-        if self.direction_timer >= self.direction_change_interval:
-            self.vel_x = random.choice([-ENEMY_SPEED, ENEMY_SPEED, 0])
-            self.direction_timer = 0
-            self.direction_change_interval = random.uniform(1.2, 3.6)
+        # Check for platform edges and reverse direction
+        if self._check_platform_edge(platforms, delta_time):
+            self.vel_x = -self.vel_x
 
         # Apply gravity (multiply by delta_time)
         self.vel_y += GRAVITY * delta_time
@@ -109,6 +102,33 @@ class Enemy(Sprite):
                         self.rect.top = obstacle.rect.bottom
                         self.y = float(self.rect.y)
                         self.vel_y = 0
+
+    def _check_platform_edge(self, platforms, delta_time):
+        """Check if enemy is approaching a platform edge."""
+        # Only check edges when on ground and moving
+        if not self.on_ground or self.vel_x == 0:
+            return False
+
+        # Calculate lookahead distance
+        lookahead_distance = abs(self.vel_x * delta_time) + 5
+
+        # Determine check position based on direction
+        if self.vel_x > 0:  # Moving right
+            check_x = self.rect.right + lookahead_distance
+        else:  # Moving left
+            check_x = self.rect.left - lookahead_distance
+
+        check_y = self.rect.bottom + 10  # Check 10px below feet
+
+        # Create small test rect
+        test_rect = pygame.Rect(check_x - 2, check_y - 2, 4, 4)
+
+        # Check if any platform exists at this position
+        for platform in platforms:
+            if test_rect.colliderect(platform.rect):
+                return False  # Ground exists - safe
+
+        return True  # No ground - edge detected
 
     def try_shoot(self, projectiles_group, delta_time):
         # Convert per-second probability to per-frame using delta_time
