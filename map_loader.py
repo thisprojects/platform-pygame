@@ -1,5 +1,6 @@
 from platforms import Platform
 from enemy import Enemy
+from machinegunner import Machinegunner
 from obstacles import Obstacle
 from ladder import Ladder
 
@@ -13,10 +14,11 @@ class MapLoader:
         Parse a 2D map and return game objects.
 
         Returns:
-            dict with keys: 'platforms', 'enemies', 'obstacles', 'ladders', 'spawn_points', 'exit_pos'
+            dict with keys: 'platforms', 'enemies', 'machinegunners', 'obstacles', 'ladders', 'spawn_points', 'exit_pos'
         """
         platforms = []
         enemies = []
+        machinegunners = []
         obstacles = []
         ladders = []
         spawn_points = []
@@ -34,6 +36,9 @@ class MapLoader:
                 elif char == 'E':
                     # Enemy spawn
                     enemies.append((x, y))
+                elif char == 'M':
+                    # Machinegunner spawn
+                    machinegunners.append((x, y))
                 elif char == 'O':
                     # Obstacle
                     obstacles.append((x, y, self.tile_size, self.tile_size))
@@ -56,6 +61,7 @@ class MapLoader:
         return {
             'platforms': merged_platforms,
             'enemies': enemies,
+            'machinegunners': machinegunners,
             'obstacles': obstacles,
             'ladders': merged_ladders,
             'spawn_points': spawn_points,
@@ -130,6 +136,7 @@ class MapLoader:
         """
         platform_sprites = []
         enemy_sprites = []
+        machinegunner_sprites = []
         obstacle_sprites = []
         ladder_sprites = []
 
@@ -138,6 +145,9 @@ class MapLoader:
 
         for x, y in map_objects['enemies']:
             enemy_sprites.append(Enemy(x, y))
+
+        for x, y in map_objects['machinegunners']:
+            machinegunner_sprites.append(Machinegunner(x, y))
 
         for x, y, width, height in map_objects['obstacles']:
             obstacle_sprites.append(Obstacle(x, y, width, height))
@@ -148,6 +158,7 @@ class MapLoader:
         return {
             'platforms': platform_sprites,
             'enemies': enemy_sprites,
+            'machinegunners': machinegunner_sprites,
             'obstacles': obstacle_sprites,
             'ladders': ladder_sprites,
             'spawn_points': map_objects['spawn_points'],

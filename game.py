@@ -33,6 +33,7 @@ class Game:
         self.platforms = pygame.sprite.Group()
         self.players = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
+        self.machinegunners = pygame.sprite.Group()
         self.projectiles = pygame.sprite.Group()
         self.obstacles = pygame.sprite.Group()
         self.ladders = pygame.sprite.Group()
@@ -71,6 +72,11 @@ class Game:
         for enemy in sprites["enemies"]:
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
+
+        # Add machinegunners
+        for machinegunner in sprites["machinegunners"]:
+            self.machinegunners.add(machinegunner)
+            self.all_sprites.add(machinegunner)
 
         # Add obstacles
         for obstacle in sprites["obstacles"]:
@@ -235,6 +241,10 @@ class Game:
             enemy.update(self.platforms, self.obstacles, self.players, self.camera_y, delta_time)
             enemy.try_shoot(self.projectiles, delta_time)
 
+        for machinegunner in self.machinegunners:
+            machinegunner.update(self.platforms, self.obstacles, self.players, self.camera_y, delta_time)
+            machinegunner.try_shoot(self.projectiles, delta_time)
+
         self.projectiles.update(delta_time)
 
         # Check projectile collisions
@@ -253,6 +263,14 @@ class Game:
                     projectile, self.enemies, True
                 )
                 if hit_enemies:
+                    projectile.kill()
+                    continue
+
+                # Player projectiles also hit machinegunners
+                hit_machinegunners = pygame.sprite.spritecollide(
+                    projectile, self.machinegunners, True
+                )
+                if hit_machinegunners:
                     projectile.kill()
 
             elif projectile.owner_type == "enemy":
@@ -281,6 +299,11 @@ class Game:
             if enemy.rect.y > self.camera_y + SCREEN_HEIGHT + 200:
                 enemy.kill()
 
+        # Remove machinegunners that fell too far off screen
+        for machinegunner in list(self.machinegunners):
+            if machinegunner.rect.y > self.camera_y + SCREEN_HEIGHT + 200:
+                machinegunner.kill()
+
         # Check lose condition
         alive_players = [p for p in self.players if p.alive]
         if len(alive_players) == 0:
@@ -294,8 +317,8 @@ class Game:
         for ladder in self.ladders:
             offset_rect = ladder.rect.copy()
             offset_rect.y -= self.camera_y
-            # Only draw if on screen
-            if -100 < offset_rect.y < SCREEN_HEIGHT + 100:
+            # Only draw if any part is on screen (check top and bottom)
+            if offset_rect.y < SCREEN_HEIGHT + 100 and offset_rect.y + ladder.rect.height > -100:
                 self.screen.blit(ladder.image, offset_rect)
 
         for platform in self.platforms:
@@ -327,6 +350,12 @@ class Game:
             offset_rect.y -= self.camera_y
             if -100 < offset_rect.y < SCREEN_HEIGHT + 100:
                 self.screen.blit(enemy.image, offset_rect)
+
+        for machinegunner in self.machinegunners:
+            offset_rect = machinegunner.rect.copy()
+            offset_rect.y -= self.camera_y
+            if -100 < offset_rect.y < SCREEN_HEIGHT + 100:
+                self.screen.blit(machinegunner.image, offset_rect)
 
         # Draw exit
         if self.exit_sprite:
@@ -362,7 +391,8 @@ class Game:
                 self.screen.blit(progress_text, (10, 50))
 
         # Enemy count
-        enemy_text = font.render(f"Enemies: {len(self.enemies)}", True, WHITE)
+        total_enemies = len(self.enemies) + len(self.machinegunners)
+        enemy_text = font.render(f"Enemies: {total_enemies}", True, WHITE)
         self.screen.blit(enemy_text, (10, 90))
 
         # Player status

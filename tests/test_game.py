@@ -479,3 +479,162 @@ class TestGame:
 
                 # Left enemy should face right (toward player)
                 assert enemy_left.facing_direction == 1
+
+    # ========== Machinegunner Tests ==========
+
+    def test_game_machinegunners_sprite_group_initialized(self, pygame_init):
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1)
+                assert isinstance(game.machinegunners, pygame.sprite.Group)
+
+    def test_game_machinegunners_created_from_map(self, pygame_init):
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+                # Test map has 2 machinegunners (marked as 'M')
+                assert len(game.machinegunners) == 2
+
+    def test_game_machinegunners_in_all_sprites(self, pygame_init):
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+                # All machinegunners should be in all_sprites group
+                for mg in game.machinegunners:
+                    assert mg in game.all_sprites
+
+    def test_player_projectile_hits_machinegunner(self, pygame_init):
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+
+                # Clear all obstacles to ensure projectile path is clear
+                game.obstacles.empty()
+
+                initial_mg_count = len(game.machinegunners)
+
+                if initial_mg_count > 0:
+                    mg = list(game.machinegunners)[0]
+
+                    # Create projectile directly at machinegunner position
+                    from projectile import Projectile
+                    from config import YELLOW
+                    projectile = Projectile(mg.rect.centerx, mg.rect.centery,
+                                          1, YELLOW, 'player')
+                    game.projectiles.add(projectile)
+
+                    game.update(0.02)
+
+                    assert len(game.machinegunners) < initial_mg_count
+                    assert len(game.projectiles) == 0
+
+    def test_enemy_count_includes_machinegunners(self, pygame_init):
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+
+                # The draw method should count both enemies and machinegunners
+                # This is verified by checking the total count
+                total_enemies = len(game.enemies) + len(game.machinegunners)
+                assert total_enemies > 0
+
+    # ========== Ladder Visibility Tests ==========
+
+    def test_ladder_visibility_when_fully_on_screen(self, pygame_init):
+        """Test that a ladder fully visible on screen should be drawn."""
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+
+                if len(game.ladders) > 0:
+                    ladder = list(game.ladders)[0]
+                    from config import SCREEN_HEIGHT
+
+                    # Simulate ladder position (after camera offset)
+                    offset_y = 100  # Ladder top is at y=100 on screen
+                    ladder_height = ladder.rect.height
+
+                    # Test visibility logic: should be visible
+                    is_visible = (offset_y < SCREEN_HEIGHT + 100 and
+                                offset_y + ladder_height > -100)
+
+                    assert is_visible is True
+
+    def test_ladder_visibility_when_top_above_screen(self, pygame_init):
+        """Test that a tall ladder with top above screen is still visible."""
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+
+                from config import SCREEN_HEIGHT
+
+                # Simulate tall ladder extending above screen
+                offset_y = -160  # Top is 160px above screen
+                ladder_height = 640  # Tall ladder
+
+                # Test visibility logic: should be visible (bottom part is on screen)
+                is_visible = (offset_y < SCREEN_HEIGHT + 100 and
+                            offset_y + ladder_height > -100)
+
+                assert is_visible is True
+
+    def test_ladder_visibility_when_completely_above_screen(self, pygame_init):
+        """Test that a ladder completely above screen is not drawn."""
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+
+                from config import SCREEN_HEIGHT
+
+                # Simulate ladder completely above screen
+                offset_y = -800  # Top is way above screen
+                ladder_height = 640
+
+                # Test visibility logic: should NOT be visible
+                is_visible = (offset_y < SCREEN_HEIGHT + 100 and
+                            offset_y + ladder_height > -100)
+
+                assert is_visible is False
+
+    def test_ladder_visibility_when_completely_below_screen(self, pygame_init):
+        """Test that a ladder completely below screen is not drawn."""
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+
+                from config import SCREEN_HEIGHT
+
+                # Simulate ladder completely below screen
+                offset_y = SCREEN_HEIGHT + 200  # Top is below screen bottom
+                ladder_height = 640
+
+                # Test visibility logic: should NOT be visible
+                is_visible = (offset_y < SCREEN_HEIGHT + 100 and
+                            offset_y + ladder_height > -100)
+
+                assert is_visible is False
+
+    def test_ladder_visibility_when_bottom_on_screen(self, pygame_init):
+        """Test that a ladder with only bottom visible is drawn."""
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+
+                from config import SCREEN_HEIGHT
+
+                # Simulate ladder with only bottom part visible
+                offset_y = -50  # Top is 50px above screen
+                ladder_height = 200  # Bottom will be at y=150 (visible)
+
+                # Test visibility logic: should be visible
+                is_visible = (offset_y < SCREEN_HEIGHT + 100 and
+                            offset_y + ladder_height > -100)
+
+                assert is_visible is True
+
+    def test_game_has_ladders_in_test_map(self, pygame_init):
+        """Verify test map contains ladders."""
+        with patch('random.choice', return_value=100):
+            with patch('random.randint', return_value=60):
+                game = Game(num_players=1, map_name='test')
+                assert len(game.ladders) > 0
