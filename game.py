@@ -157,6 +157,39 @@ class Game:
             # Player is too low on screen - move camera down
             self.camera_y = highest_player_y - lower_threshold
 
+    def _alert_enemies_to_shot(self, shooter_x, shooter_y):
+        """
+        Alert nearby enemies when a player fires a shot.
+
+        Args:
+            shooter_x: X position of the shooter
+            shooter_y: Y position of the shooter
+        """
+        # Check each enemy
+        for enemy in self.enemies:
+            # Check if enemy is on same screen (vertically)
+            enemy_screen_y = enemy.rect.centery - self.camera_y
+            shooter_screen_y = shooter_y - self.camera_y
+
+            # Both must be within visible screen bounds
+            if (0 <= enemy_screen_y <= SCREEN_HEIGHT and
+                0 <= shooter_screen_y <= SCREEN_HEIGHT):
+
+                # Enemy is on same screen, trigger alert
+                # Find closest player to determine facing direction
+                closest_player = None
+                min_distance = float('inf')
+
+                for player in self.players:
+                    if player.alive:
+                        distance = abs(player.rect.centerx - enemy.rect.centerx)
+                        if distance < min_distance:
+                            min_distance = distance
+                            closest_player = player
+
+                if closest_player:
+                    enemy._enter_alert_state(closest_player)
+
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -173,13 +206,19 @@ class Game:
                     if event.key == pygame.K_SPACE:
                         player_list = list(self.players)
                         if len(player_list) > 0:
-                            player_list[0].shoot(self.projectiles)
+                            player = player_list[0]
+                            player.shoot(self.projectiles)
+                            # Alert enemies on same screen
+                            self._alert_enemies_to_shot(player.rect.centerx, player.rect.centery)
 
                     # Player 2 shoot
                     if event.key == pygame.K_RSHIFT:
                         player_list = list(self.players)
                         if len(player_list) > 1:
-                            player_list[1].shoot(self.projectiles)
+                            player = player_list[1]
+                            player.shoot(self.projectiles)
+                            # Alert enemies on same screen
+                            self._alert_enemies_to_shot(player.rect.centerx, player.rect.centery)
 
     def update(self, delta_time):
         if self.game_over or self.victory:
@@ -193,7 +232,7 @@ class Game:
             player.update(self.platforms, self.obstacles, self.ladders, delta_time)
 
         for enemy in self.enemies:
-            enemy.update(self.platforms, self.obstacles, delta_time)
+            enemy.update(self.platforms, self.obstacles, self.players, self.camera_y, delta_time)
             enemy.try_shoot(self.projectiles, delta_time)
 
         self.projectiles.update(delta_time)

@@ -23,3 +23,16 @@ PLAYER_CLIMB_SPEED = 150  # pixels per second for climbing ladders
 PROJECTILE_SPEED = 400  # pixels per second (was 8 per frame * 50 FPS)
 ENEMY_SPEED = 100  # pixels per second (was 2 per frame * 50 FPS)
 ENEMY_SHOOT_CHANCE = 0.5  # Probability per second (was 0.01 per frame * 50 FPS)
+
+# Enemy alert mode settings
+ENEMY_ALERT_DURATION = 7.0  # Seconds to stay alert
+ENEMY_ALERT_COOLDOWN = 2.0  # Cooldown before re-alert
+ENEMY_RAYCAST_INTERVAL = 0.2  # Check for players every 0.2 seconds
+ENEMY_DETECTION_VERTICAL_TOLERANCE = (
+    150  # Vertical distance for detection (within 2-3 platform heights)
+)
+
+# Enemy burst fire settings (alert mode)
+ENEMY_BURST_SHOT_COUNT = 3  # Number of shots per burst
+ENEMY_BURST_SHOT_INTERVAL = 0.5  # Seconds between shots in burst (quick fire)
+ENEMY_BURST_COOLDOWN = 3.0  # Seconds to wait after burst before next burst

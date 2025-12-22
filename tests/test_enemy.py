@@ -55,7 +55,7 @@ class TestEnemy:
         initial_y = enemy.y  # Use float position for precision
         initial_vel_y = enemy.vel_y
 
-        enemy.update(platforms, obstacles, 0.02)
+        enemy.update(platforms, obstacles, [], 0, 0.02)
 
         # Gravity is applied as GRAVITY * delta_time
         expected_vel_y = initial_vel_y + (GRAVITY * 0.02)
@@ -70,7 +70,7 @@ class TestEnemy:
                 obstacles = []
                 initial_x = enemy.rect.x
 
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
 
                 # Movement is ENEMY_SPEED * delta_time
                 expected_x = initial_x + (ENEMY_SPEED * 0.02)
@@ -83,7 +83,7 @@ class TestEnemy:
                 platforms = []
                 obstacles = []
 
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
 
                 assert enemy.rect.left >= 0
                 assert enemy.vel_x == ENEMY_SPEED
@@ -95,7 +95,7 @@ class TestEnemy:
                 platforms = []
                 obstacles = []
 
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
 
                 assert enemy.rect.right <= SCREEN_WIDTH
                 assert enemy.vel_x == -ENEMY_SPEED
@@ -111,7 +111,7 @@ class TestEnemy:
 
                 # Need more iterations with delta_time
                 for _ in range(100):
-                    enemy.update(platforms, obstacles, 0.02)
+                    enemy.update(platforms, obstacles, [], 0, 0.02)
                     if enemy.on_ground:
                         break
 
@@ -128,7 +128,7 @@ class TestEnemy:
                 obstacles = []
 
                 for _ in range(100):
-                    enemy.update(platforms, obstacles, 0.02)
+                    enemy.update(platforms, obstacles, [], 0, 0.02)
                     if enemy.on_ground:
                         break
 
@@ -143,7 +143,7 @@ class TestEnemy:
                 platforms = [platform]
                 obstacles = []
 
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
 
                 assert enemy.rect.right == platform.rect.left
                 assert enemy.vel_x == -ENEMY_SPEED
@@ -156,7 +156,7 @@ class TestEnemy:
                 platforms = [platform]
                 obstacles = []
 
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
 
                 assert enemy.rect.left == platform.rect.right
                 assert enemy.vel_x == ENEMY_SPEED
@@ -170,7 +170,7 @@ class TestEnemy:
                 obstacles = [obstacle]
 
                 for _ in range(100):
-                    enemy.update(platforms, obstacles, 0.02)
+                    enemy.update(platforms, obstacles, [], 0, 0.02)
                     if enemy.on_ground:
                         break
 
@@ -185,7 +185,7 @@ class TestEnemy:
                 platforms = []
                 obstacles = [obstacle]
 
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
 
                 # Enemy reverses direction when hitting obstacle
                 assert enemy.rect.right == obstacle.rect.left
@@ -199,7 +199,7 @@ class TestEnemy:
                 platforms = []
                 obstacles = [obstacle]
 
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
 
                 # Enemy reverses direction when hitting obstacle
                 assert enemy.rect.left == obstacle.rect.right
@@ -287,7 +287,7 @@ class TestEnemy:
             enemy.on_ground = True  # Simulate being on ground
 
             initial_vel_x = enemy.vel_x
-            enemy.update(platforms, obstacles, 0.02)
+            enemy.update(platforms, obstacles, [], 0, 0.02)
 
             # Should have reversed direction at edge
             assert enemy.vel_x == -initial_vel_x
@@ -310,7 +310,7 @@ class TestEnemy:
             enemy.on_ground = True  # Simulate being on ground
 
             initial_vel_x = enemy.vel_x
-            enemy.update(platforms, obstacles, 0.02)
+            enemy.update(platforms, obstacles, [], 0, 0.02)
 
             # Should have reversed direction at edge
             assert enemy.vel_x == -initial_vel_x
@@ -333,7 +333,7 @@ class TestEnemy:
             enemy.on_ground = True  # Simulate being on ground
 
             initial_vel_x = enemy.vel_x
-            enemy.update(platforms, obstacles, 0.02)
+            enemy.update(platforms, obstacles, [], 0, 0.02)
 
             # Should NOT have reversed - plenty of ground ahead
             assert enemy.vel_x == initial_vel_x
@@ -350,7 +350,7 @@ class TestEnemy:
 
             # Update while falling
             initial_vel = enemy.vel_x
-            enemy.update(platforms, obstacles, 0.02)
+            enemy.update(platforms, obstacles, [], 0, 0.02)
 
             # Should NOT reverse direction while in air
             assert enemy.vel_x == initial_vel
@@ -365,7 +365,7 @@ class TestEnemy:
 
             # Land enemy on platform
             for _ in range(100):
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
                 if enemy.on_ground:
                     break
 
@@ -399,7 +399,7 @@ class TestEnemy:
             max_y = enemy.rect.bottom  # Track maximum fall
 
             for _ in range(500):  # 10 seconds at 0.02 delta_time
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
 
                 # Track direction changes
                 if enemy.vel_x != last_vel and last_vel != 0:
@@ -429,7 +429,7 @@ class TestEnemy:
 
             # Land enemy on platform1
             for _ in range(100):
-                enemy.update(platforms, obstacles, 0.02)
+                enemy.update(platforms, obstacles, [], 0, 0.02)
                 if enemy.on_ground:
                     break
 
@@ -440,8 +440,479 @@ class TestEnemy:
             enemy.vel_x = ENEMY_SPEED
 
             initial_vel = enemy.vel_x
-            enemy.update(platforms, obstacles, 0.02)
+            enemy.update(platforms, obstacles, [], 0, 0.02)
 
             # Should have reversed at platform1's edge
             # (platform2 is too far to prevent edge detection)
             assert enemy.vel_x == -initial_vel
+
+    # ========== Alert Mode Tests ==========
+
+    def test_enemy_initial_alert_state(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+
+            assert enemy.alert_state == "PATROL"
+            assert enemy.alert_timer == 0.0
+            assert enemy.shoot_timer == 0.0
+            assert enemy.burst_shot_count == 0
+
+    def test_enemy_enter_alert_state(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+
+            # Create mock player
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+
+            player = MockPlayer()
+
+            # Enter alert state
+            enemy._enter_alert_state(player)
+
+            assert enemy.alert_state == "ALERT"
+            assert enemy.alert_timer == 0.0
+            assert enemy.burst_shot_count == 0
+            assert enemy.last_seen_player_x == player.rect.centerx
+            # Should face player
+            assert enemy.facing_direction == 1  # Player is to the right
+
+    def test_enemy_enter_alert_state_player_on_left(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(200, 100)
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(50, 100, 30, 30)  # Left of enemy
+
+            player = MockPlayer()
+            enemy._enter_alert_state(player)
+
+            assert enemy.facing_direction == -1  # Player is to the left
+
+    def test_enemy_stops_moving_when_alerted(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+                    self.alive = True
+
+            player = MockPlayer()
+
+            # Enter alert state
+            enemy._enter_alert_state(player)
+            assert enemy.alert_state == "ALERT"
+
+            # Update enemy
+            initial_x = enemy.x
+            enemy.update(platforms, obstacles, [player], 0, 0.02)
+
+            # Should be stationary (vel_x = 0)
+            assert enemy.vel_x == 0
+            # Position should not change horizontally (only gravity affects Y)
+
+    def test_enemy_alert_timer_expires(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+                    self.alive = True
+
+            player = MockPlayer()
+
+            # Enter alert and simulate time passing
+            enemy._enter_alert_state(player)
+            assert enemy.alert_state == "ALERT"
+
+            # Simulate 7+ seconds passing (alert duration)
+            for _ in range(400):  # 400 * 0.02 = 8 seconds
+                enemy._update_alert_state([player], platforms, obstacles, 0, 0.02)
+
+            # Should have exited to COOLDOWN
+            assert enemy.alert_state == "COOLDOWN"
+
+    def test_enemy_alert_state_transitions_to_patrol(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            platforms = []
+            obstacles = []
+
+            # Manually set to cooldown
+            enemy.alert_state = "COOLDOWN"
+            enemy.alert_cooldown = 0.0
+
+            # Simulate 2+ seconds
+            for _ in range(110):  # 110 * 0.02 = 2.2 seconds
+                enemy._update_alert_state([], platforms, obstacles, 0, 0.02)
+
+            # Should be back to PATROL
+            assert enemy.alert_state == "PATROL"
+
+    def test_enemy_exit_alert_state_resumes_movement(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+
+            # Set facing direction
+            enemy.facing_direction = 1
+
+            # Exit alert state
+            enemy._exit_alert_state()
+
+            # Should resume patrol
+            assert enemy.alert_state == "COOLDOWN"
+            assert enemy.vel_x == ENEMY_SPEED  # Moving in facing direction
+
+    # ========== Raycasting Tests ==========
+
+    def test_enemy_raycast_detects_player_same_height(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(300, 100, 30, 30)  # Same height, to the right
+
+            player = MockPlayer()
+
+            # Should detect player
+            can_see = enemy._raycast_to_player(player, platforms, obstacles)
+            assert can_see is True
+
+    def test_enemy_raycast_blocked_by_platform(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+
+            # Platform blocking the raycast
+            blocking_platform = Platform(150, 90, 50, 60)
+            platforms = [blocking_platform]
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(300, 100, 30, 30)
+
+            player = MockPlayer()
+
+            # Should NOT detect player (blocked)
+            can_see = enemy._raycast_to_player(player, platforms, obstacles)
+            assert can_see is False
+
+    def test_enemy_raycast_blocked_by_obstacle(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            platforms = []
+
+            # Obstacle blocking the raycast
+            from obstacles import Obstacle
+            blocking_obstacle = Obstacle(150, 90, 50, 60)
+            obstacles = [blocking_obstacle]
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(300, 100, 30, 30)
+
+            player = MockPlayer()
+
+            # Should NOT detect player (blocked)
+            can_see = enemy._raycast_to_player(player, platforms, obstacles)
+            assert can_see is False
+
+    def test_enemy_raycast_fails_when_player_too_high(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    # Player 300 pixels above enemy (beyond tolerance)
+                    self.rect = pygame.Rect(150, -200, 30, 30)
+
+            player = MockPlayer()
+
+            # Should NOT detect (vertical distance too large)
+            can_see = enemy._raycast_to_player(player, platforms, obstacles)
+            assert can_see is False
+
+    def test_enemy_raycast_fails_when_player_too_low(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    # Player 300 pixels below enemy (beyond tolerance)
+                    self.rect = pygame.Rect(150, 400, 30, 30)
+
+            player = MockPlayer()
+
+            # Should NOT detect (vertical distance too large)
+            can_see = enemy._raycast_to_player(player, platforms, obstacles)
+            assert can_see is False
+
+    def test_enemy_check_player_detection_when_on_ground(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            enemy.on_ground = True
+            enemy.raycast_timer = 1.0  # Force raycast this update
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+                    self.alive = True
+
+            player = MockPlayer()
+
+            # Should detect player
+            detected = enemy._check_player_detection([player], platforms, obstacles, 0.02)
+            assert detected == player
+
+    def test_enemy_check_player_detection_skips_when_in_air(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            enemy.on_ground = False  # In air
+            enemy.raycast_timer = 1.0
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+                    self.alive = True
+
+            player = MockPlayer()
+
+            # Should NOT detect (not on ground)
+            detected = enemy._check_player_detection([player], platforms, obstacles, 0.02)
+            assert detected is None
+
+    def test_enemy_check_player_detection_skips_dead_players(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            enemy.on_ground = True
+            enemy.raycast_timer = 1.0
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+                    self.alive = False  # Dead
+
+            player = MockPlayer()
+
+            # Should NOT detect dead player
+            detected = enemy._check_player_detection([player], platforms, obstacles, 0.02)
+            assert detected is None
+
+    def test_enemy_raycast_throttled_by_timer(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            enemy.on_ground = True
+            enemy.raycast_timer = 0.0  # Just raycasted
+            platforms = []
+            obstacles = []
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+                    self.alive = True
+
+            player = MockPlayer()
+
+            # Should NOT raycast yet (timer not expired)
+            detected = enemy._check_player_detection([player], platforms, obstacles, 0.01)
+            assert detected is None
+
+            # After enough time, should raycast
+            detected = enemy._check_player_detection([player], platforms, obstacles, 0.2)
+            assert detected == player
+
+    # ========== Burst Fire Tests ==========
+
+    def test_enemy_burst_fire_first_shot_immediate(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            projectiles = pygame.sprite.Group()
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+
+            player = MockPlayer()
+
+            # Enter alert state
+            enemy._enter_alert_state(player)
+
+            # First shot should fire immediately (shoot_timer set to interval)
+            initial_count = len(projectiles)
+            enemy.try_shoot(projectiles, 0.01)  # Small delta
+
+            assert len(projectiles) == initial_count + 1
+
+    def test_enemy_burst_fire_three_shots(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            projectiles = pygame.sprite.Group()
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+
+            player = MockPlayer()
+
+            enemy._enter_alert_state(player)
+
+            shot_times = []
+            time = 0.0
+            delta_time = 0.1
+
+            # Simulate 3 seconds
+            while time < 3.0:
+                before = len(projectiles)
+                enemy.try_shoot(projectiles, delta_time)
+                after = len(projectiles)
+
+                if after > before:
+                    shot_times.append(time)
+
+                time += delta_time
+
+            # Should have fired 3 shots in burst
+            assert len(shot_times) == 3
+
+            # Verify timing (0.5 second intervals)
+            assert 0.0 <= shot_times[0] <= 0.2  # First shot immediate
+            assert 0.4 <= shot_times[1] <= 0.7  # Second shot ~0.5s later
+            assert 0.9 <= shot_times[2] <= 1.2  # Third shot ~1.0s total
+
+    def test_enemy_burst_fire_cooldown_between_bursts(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            projectiles = pygame.sprite.Group()
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+
+            player = MockPlayer()
+
+            enemy._enter_alert_state(player)
+
+            shot_times = []
+            time = 0.0
+            delta_time = 0.1
+
+            # Simulate 10 seconds to see multiple bursts
+            while time < 10.0:
+                before = len(projectiles)
+                enemy.try_shoot(projectiles, delta_time)
+                after = len(projectiles)
+
+                if after > before:
+                    shot_times.append(time)
+
+                time += delta_time
+
+            # Should have multiple bursts
+            assert len(shot_times) >= 6  # At least 2 full bursts
+
+            # Verify cooldown between burst 1 and burst 2
+            # Burst 1: shots at ~0.0, ~0.5, ~1.0
+            # Cooldown: 3.0 seconds
+            # Burst 2: shots at ~4.5, ~5.0, ~5.5
+            cooldown_period = shot_times[3] - shot_times[2]
+            assert 3.0 <= cooldown_period <= 3.3  # 3 second cooldown with tolerance
+
+    def test_enemy_burst_fire_counter_resets(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            projectiles = pygame.sprite.Group()
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(200, 100, 30, 30)
+
+            player = MockPlayer()
+
+            enemy._enter_alert_state(player)
+
+            # Fire first burst
+            for _ in range(100):  # Plenty of time
+                enemy.try_shoot(projectiles, 0.05)
+
+            # Should have 3+ shots (burst + possibly next burst)
+            assert len(projectiles) >= 3
+
+            # Verify burst_shot_count cycles properly
+            # After cooldown completes, should reset to 0 and start new burst
+            time = 0.0
+            shot_count_when_shooting = []
+
+            for _ in range(200):
+                before = len(projectiles)
+                enemy.try_shoot(projectiles, 0.05)
+                after = len(projectiles)
+
+                if after > before:
+                    shot_count_when_shooting.append(enemy.burst_shot_count)
+
+                time += 0.05
+
+            # Should see counts of 1, 2, 3, 1, 2, 3, ... (cycling)
+            # Verify pattern exists
+            assert 1 in shot_count_when_shooting
+            assert 2 in shot_count_when_shooting
+            assert 3 in shot_count_when_shooting
+
+    def test_enemy_no_burst_fire_in_patrol_mode(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            with patch('random.random', return_value=0.999):  # Don't shoot randomly
+                enemy = Enemy(100, 100)
+                projectiles = pygame.sprite.Group()
+
+                # Enemy in PATROL mode (not alerted)
+                assert enemy.alert_state == "PATROL"
+
+                # Try to shoot many times
+                for _ in range(100):
+                    enemy.try_shoot(projectiles, 0.1)
+
+                # Should not have fired (random chance is too low)
+                assert len(projectiles) == 0
+
+    def test_enemy_burst_fire_uses_facing_direction(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            projectiles = pygame.sprite.Group()
+
+            class MockPlayer:
+                def __init__(self):
+                    self.rect = pygame.Rect(50, 100, 30, 30)  # Left of enemy
+
+            player = MockPlayer()
+
+            # Enter alert (player on left)
+            enemy._enter_alert_state(player)
+            assert enemy.facing_direction == -1
+
+            # Fire shot
+            enemy.try_shoot(projectiles, 0.01)
+
+            # Projectile should go left
+            projectile = list(projectiles)[0]
+            assert projectile.direction == -1
