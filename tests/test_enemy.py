@@ -161,23 +161,6 @@ class TestEnemy:
                 assert enemy.rect.left == platform.rect.right
                 assert enemy.vel_x == ENEMY_SPEED
 
-    def test_enemy_direction_change_timer(self, pygame_init):
-        with patch('random.choice', side_effect=[ENEMY_SPEED, -ENEMY_SPEED]):
-            with patch('random.uniform', return_value=0.1):  # Short interval
-                enemy = Enemy(100, 100)
-                platforms = []
-                obstacles = []
-
-                initial_vel_x = enemy.vel_x
-                # Set timer close to interval
-                enemy.direction_timer = enemy.direction_change_interval - 0.02
-
-                enemy.update(platforms, obstacles, 0.02)
-
-                # Timer should have reset and direction changed
-                assert enemy.direction_timer < enemy.direction_change_interval
-                assert enemy.vel_x != initial_vel_x
-
     def test_enemy_collision_with_obstacle_vertical(self, pygame_init):
         with patch('random.choice', return_value=0):
             with patch('random.uniform', return_value=60):
@@ -285,3 +268,180 @@ class TestEnemy:
 
                     projectile = list(projectiles)[0]
                     assert projectile.direction in [-1, 1]
+
+    def test_enemy_detects_right_platform_edge(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            # Small platform - enemy near right edge
+            platform = Platform(90, 130, 50, 20)
+            platforms = [platform]
+            obstacles = []
+
+            # Position enemy on platform near right edge
+            enemy.x = platform.rect.right - 35.0  # 5 pixels from edge (enemy is 30px wide)
+            enemy.rect.x = int(enemy.x)
+            enemy.y = platform.rect.top - 31.0  # Just above platform
+            enemy.rect.y = int(enemy.y)
+            enemy.vel_x = ENEMY_SPEED  # Moving right toward edge
+            enemy.vel_y = 1.0  # Slight downward velocity to trigger collision
+            enemy.on_ground = True  # Simulate being on ground
+
+            initial_vel_x = enemy.vel_x
+            enemy.update(platforms, obstacles, 0.02)
+
+            # Should have reversed direction at edge
+            assert enemy.vel_x == -initial_vel_x
+
+    def test_enemy_detects_left_platform_edge(self, pygame_init):
+        with patch('random.choice', return_value=-ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            # Small platform
+            platform = Platform(90, 130, 50, 20)
+            platforms = [platform]
+            obstacles = []
+
+            # Position enemy on platform near left edge
+            enemy.x = platform.rect.left + 5.0  # 5 pixels from left edge
+            enemy.rect.x = int(enemy.x)
+            enemy.y = platform.rect.top - 31.0  # Just above platform
+            enemy.rect.y = int(enemy.y)
+            enemy.vel_x = -ENEMY_SPEED  # Moving left toward edge
+            enemy.vel_y = 1.0  # Slight downward velocity to trigger collision
+            enemy.on_ground = True  # Simulate being on ground
+
+            initial_vel_x = enemy.vel_x
+            enemy.update(platforms, obstacles, 0.02)
+
+            # Should have reversed direction at edge
+            assert enemy.vel_x == -initial_vel_x
+
+    def test_enemy_no_edge_detection_when_ground_continues(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            # Large platform - plenty of ground ahead
+            platform = Platform(90, 130, 500, 20)
+            platforms = [platform]
+            obstacles = []
+
+            # Position enemy in middle of platform
+            enemy.x = float(platform.rect.centerx)
+            enemy.rect.x = int(enemy.x)
+            enemy.y = platform.rect.top - 31.0  # Just above platform
+            enemy.rect.y = int(enemy.y)
+            enemy.vel_x = ENEMY_SPEED
+            enemy.vel_y = 1.0  # Slight downward velocity to trigger collision
+            enemy.on_ground = True  # Simulate being on ground
+
+            initial_vel_x = enemy.vel_x
+            enemy.update(platforms, obstacles, 0.02)
+
+            # Should NOT have reversed - plenty of ground ahead
+            assert enemy.vel_x == initial_vel_x
+
+    def test_enemy_no_edge_detection_when_in_air(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            platforms = []
+            obstacles = []
+
+            # Enemy is falling (in air)
+            assert enemy.on_ground is False
+            assert enemy.vel_x == ENEMY_SPEED
+
+            # Update while falling
+            initial_vel = enemy.vel_x
+            enemy.update(platforms, obstacles, 0.02)
+
+            # Should NOT reverse direction while in air
+            assert enemy.vel_x == initial_vel
+
+    def test_enemy_no_edge_detection_when_stationary(self, pygame_init):
+        with patch('random.choice', return_value=0):
+            enemy = Enemy(100, 100)
+            # Small platform
+            platform = Platform(90, 130, 50, 20)
+            platforms = [platform]
+            obstacles = []
+
+            # Land enemy on platform
+            for _ in range(100):
+                enemy.update(platforms, obstacles, 0.02)
+                if enemy.on_ground:
+                    break
+
+            # Make enemy stationary
+            enemy.vel_x = 0
+
+            # Edge detection should return False for stationary enemy
+            edge_detected = enemy._check_platform_edge(platforms, 0.02)
+            assert edge_detected is False
+
+    def test_enemy_patrols_on_platform_without_falling(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            # Small platform for testing patrol (100px wide, enemy is 30px)
+            platform = Platform(200, 300, 100, 20)
+            platforms = [platform]
+            obstacles = []
+
+            # Position enemy on platform
+            enemy.x = float(platform.rect.centerx)
+            enemy.rect.x = int(enemy.x)
+            enemy.y = platform.rect.top - 31.0  # Just above
+            enemy.rect.y = int(enemy.y)
+            enemy.vel_y = 1.0
+            enemy.vel_x = ENEMY_SPEED
+            enemy.on_ground = True
+
+            # Simulate patrol for several seconds
+            direction_changes = 0
+            last_vel = enemy.vel_x
+            max_y = enemy.rect.bottom  # Track maximum fall
+
+            for _ in range(500):  # 10 seconds at 0.02 delta_time
+                enemy.update(platforms, obstacles, 0.02)
+
+                # Track direction changes
+                if enemy.vel_x != last_vel and last_vel != 0:
+                    direction_changes += 1
+                last_vel = enemy.vel_x
+
+                # Enemy should never fall significantly below platform
+                # Allow some tolerance for collision resolution
+                max_y = max(max_y, enemy.rect.bottom)
+                assert enemy.rect.bottom <= platform.rect.top + 50, f"Enemy fell too far: bottom={enemy.rect.bottom}, platform top={platform.rect.top}"
+
+                # Enemy center should stay within platform horizontal bounds (with small margin)
+                assert enemy.rect.centerx >= platform.rect.left - 5, f"Enemy fell off left: {enemy.rect.centerx} < {platform.rect.left}"
+                assert enemy.rect.centerx <= platform.rect.right + 5, f"Enemy fell off right: {enemy.rect.centerx} > {platform.rect.right}"
+
+            # Should have changed direction at least once (patrol behavior)
+            assert direction_changes >= 2, f"Expected at least 2 direction changes, got {direction_changes}"
+
+    def test_enemy_edge_detection_with_multiple_platforms(self, pygame_init):
+        with patch('random.choice', return_value=ENEMY_SPEED):
+            enemy = Enemy(100, 100)
+            # Multiple platforms at different positions
+            platform1 = Platform(90, 130, 50, 20)  # Enemy lands here
+            platform2 = Platform(200, 130, 50, 20)  # Different platform (no edge)
+            platforms = [platform1, platform2]
+            obstacles = []
+
+            # Land enemy on platform1
+            for _ in range(100):
+                enemy.update(platforms, obstacles, 0.02)
+                if enemy.on_ground:
+                    break
+
+            # Position enemy near right edge of platform1
+            # Platform2 is far away, so edge should be detected
+            enemy.x = platform1.rect.right - 35.0
+            enemy.rect.x = int(enemy.x)
+            enemy.vel_x = ENEMY_SPEED
+
+            initial_vel = enemy.vel_x
+            enemy.update(platforms, obstacles, 0.02)
+
+            # Should have reversed at platform1's edge
+            # (platform2 is too far to prevent edge detection)
+            assert enemy.vel_x == -initial_vel
